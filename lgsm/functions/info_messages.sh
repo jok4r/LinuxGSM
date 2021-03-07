@@ -1,6 +1,7 @@
 #!/bin/bash
-# LinuxGSM info_messages.sh function
+# LinuxGSM info_messages.sh module
 # Author: Daniel Gibbs
+# Contributors: http://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Defines server info messages for details and alerts.
 
@@ -556,7 +557,7 @@ fn_info_message_commandlineparms(){
 		unset serverpassword
 	fi
 	fn_parms
-	echo -e "${executable} ${parms}"
+	echo -e "${preexecutable} ${executable} ${parms}"
 }
 
 fn_info_message_ports(){
@@ -572,7 +573,7 @@ fn_info_message_ports(){
 
 	parmslocation="${red}UNKNOWN${default}"
 	# engines/games that require editing in the config file.
-	local ports_edit_array=( "avalanche2.0" "avalanche3.0" "Ballistic Overkill" "dontstarve" "Eco" "idtech2" "idtech3" "idtech3_ql" "lwjgl2" "Minecraft Bedrock" "Project Cars" "projectzomboid" "quake" "refractor" "realvirtuality" "renderware" "seriousengine35" "Stationeers" "teeworlds" "terraria" "unreal" "unreal2" "unreal3" "TeamSpeak 3" "Mumble" "7 Days To Die" "wurm")
+	local ports_edit_array=( "avalanche2.0" "avalanche3.0" "Ballistic Overkill" "Barotrauma" "dontstarve" "Eco" "idtech2" "idtech3" "idtech3_ql" "lwjgl2" "Minecraft Bedrock" "Project Cars" "projectzomboid" "quake" "refractor" "realvirtuality" "renderware" "Stationeers" "teeworlds" "terraria" "unreal" "unreal2" "unreal3" "TeamSpeak 3" "Mumble" "7 Days To Die" "Vintage Story" "wurm")
 	for port_edit in "${ports_edit_array[@]}"; do
 		if [ "${shortname}" == "ut3" ]; then
 			parmslocation="${servercfgdir}/UTWeb.ini"
@@ -582,8 +583,8 @@ fn_info_message_ports(){
 			parmslocation="${servercfgfullpath}"
 		fi
 	done
-	# engines/games that require editing the parms.
-	local ports_edit_array=( "Avorion" "goldsrc" "Factorio" "Hurtworld" "iw3.0" "ioquake3" "qfusion" "Rust" "Soldat" "spark" "source" "starbound" "unreal4" "realvirtuality" "Unturned" )
+	# engines/games that require editing the start parameters.
+	local ports_edit_array=( "Avorion" "col" "goldsrc" "Factorio" "Hurtworld" "iw3.0" "ioquake3" "qfusion" "Rust" "scpsl" "scpslsm" "Soldat" "spark" "source" "starbound" "unreal4" "realvirtuality" "Unturned" "vh" )
 	for port_edit in "${ports_edit_array[@]}"; do
 		if [ "${engine}" == "${port_edit}" ]||[ "${gamename}" == "${port_edit}" ]||[ "${shortname}" == "${port_edit}" ]; then
 			parmslocation="${configdirserver}"
@@ -837,7 +838,9 @@ fn_info_message_inss(){
 		echo -e "${lightblue}DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL${default}"
 		echo -e "> Game\tINBOUND\t${port}\tudp"
 		echo -e "> Query\tINBOUND\t${queryport}\tudp"
-		echo -e "> RCON\tINBOUND\t${rconport}\ttcp"
+		if [ -n "${rconport}" ]; then
+			echo -e "> RCON\tINBOUND\t${rconport}\ttcp"
+		fi
 	} | column -s $'\t' -t
 }
 
@@ -1081,17 +1084,6 @@ fn_info_message_samp(){
 	} | column -s $'\t' -t
 }
 
-
-fn_info_message_ss3(){
-	echo -e "netstat -atunp | grep Sam3_Ded"
-	echo -e ""
-	{
-		echo -e "${lightblue}DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL${default}"
-		echo -e "> Game/RCON\tINBOUND\t${port}\ttcp"
-		echo -e "> Query\tINBOUND\t${queryport}\tudp"
-	} | column -s $'\t' -t
-}
-
 fn_info_message_sbots(){
 	echo -e "netstat -atunp | grep blank1"
 	echo -e ""
@@ -1267,9 +1259,9 @@ fn_info_message_unreal(){
 		fi
 		if [ "${appid}" ]; then
 			if [ "${appid}" == "223250" ]; then
-				echo -e "< Steam\tINBOUND\t20610\tudp"
+				echo -e "> Steam\tINBOUND\t20610\tudp"
 			else
-				echo -e "< Steam\tINBOUND\t20660\tudp"
+				echo -e "> Steam\tINBOUND\t20660\tudp"
 			fi
 		fi
 		echo -e "> Web Admin\tINBOUND\t${webadminport}\ttcp\tListenPort=${webadminport}"
@@ -1346,6 +1338,16 @@ fn_info_message_ut(){
 	{
 		echo -e "${lightblue}DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL${default}"
 		echo -e "> Game\tINBOUND\t${port}\tudp"
+	} | column -s $'\t' -t
+}
+
+fn_info_message_vh(){
+	echo -e "netstat -atunp | grep valheim"
+	echo -e ""
+	{
+		echo -e "${lightblue}DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL${default}"
+		echo -e "> Game\tINBOUND\t${port}\tudp"
+		echo -e "> Query\tINBOUND\t${queryport}\tudp"
 	} | column -s $'\t' -t
 }
 
@@ -1446,6 +1448,44 @@ fn_info_message_warfork(){
 	} | column -s $'\t' -t
 }
 
+fn_info_message_pavlovvr(){
+	echo "netstat -atunp | grep Pavlov"
+	echo -e ""
+	{
+		echo -e "DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL"
+		echo -e "> Game\tINBOUND\t${port}\tudp"
+		echo -e "> Game\tINBOUND\t$((port+400))\tudp"
+	} | column -s $'\t' -t
+}
+
+fn_info_message_colony(){
+	echo -e "netstat -atunp | grep colonyserv"
+	echo -e ""
+	{
+		echo -e "${lightblue}DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL${default}"
+		echo -e "> Game\tINBOUND\t${port}\tudp"
+		echo -e "> Steam\tINBOUND\t${steamport}\tudp"
+	} | column -s $'\t' -t
+}
+
+fn_info_message_vintagestory(){
+	echo "netstat -atunp | grep cli"
+	echo -e ""
+	{
+		echo -e "DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL"
+		echo -e "> Game\tINBOUND\t${port}\tTCP"
+	} | column -s $'\t' -t
+}
+
+fn_info_message_scpsl(){
+	echo -e "netstat -atunp | grep SCPSL"
+	echo -e ""
+	{
+		echo -e "${lightblue}DESCRIPTION\tDIRECTION\tPORT\tPROTOCOL${default}"
+		echo -e "> Game\tINBOUND\t${port}\tudp"
+	} | column -s $'\t' -t
+}
+
 fn_info_message_select_engine(){
 	# Display details depending on game or engine.
 	if [ "${shortname}" == "ac" ]; then
@@ -1456,6 +1496,10 @@ fn_info_message_select_engine(){
 		fn_info_message_avorion
 	elif [ "${shortname}" == "arma3" ]; then
 		fn_info_message_arma3
+	elif [ "${shortname}" == "bf1942" ]; then
+		fn_info_message_bf1942
+	elif [ "${shortname}" == "bfv" ]; then
+		fn_info_message_bfv
 	elif [ "${shortname}" == "bo" ]; then
 		fn_info_message_ballisticoverkill
 	elif [ "${shortname}" == "bt" ]; then
@@ -1474,6 +1518,8 @@ fn_info_message_select_engine(){
 		fn_info_message_cod4
 	elif [ "${shortname}" == "codwaw" ]; then
 		fn_info_message_codwaw
+	elif [ "${shortname}" == "col" ]; then
+		fn_info_message_colony
 	elif [ "${shortname}" == "dst" ]; then
 		fn_info_message_dst
 	elif [ "${shortname}" == "eco" ]; then
@@ -1494,8 +1540,18 @@ fn_info_message_select_engine(){
 		fn_info_message_justcause3
 	elif [ "${shortname}" == "kf2" ]; then
 		fn_info_message_kf2
+	elif [ "${shortname}" == "mc" ]; then
+		fn_info_message_minecraft
 	elif [ "${shortname}" == "mcb" ]; then
 		fn_info_message_minecraft_bedrock
+	elif [ "${shortname}" == "mh" ]; then
+		fn_info_message_mordhau
+	elif [ "${shortname}" == "mohaa" ]; then
+		fn_info_message_mohaa
+	elif [ "${shortname}" == "mta" ]; then
+		fn_info_message_mta
+	elif [ "${shortname}" == "mumble" ]; then
+		fn_info_message_mumble
 	elif [ "${shortname}" == "onset" ]; then
 		fn_info_message_onset
 	elif [ "${shortname}" == "mom" ]; then
@@ -1516,6 +1572,8 @@ fn_info_message_select_engine(){
 		fn_info_message_quakelive
 	elif [ "${shortname}" == "samp" ]; then
 		fn_info_message_samp
+	elif [ "${shortname}" == "scpsl" ]||[ "${shortname}" == "scpslsm" ]; then
+		fn_info_message_scpsl
 	elif [ "${shortname}" == "sdtd" ]; then
 		fn_info_message_sdtd
 	elif [ "${shortname}" == "squad" ]; then
@@ -1530,8 +1588,6 @@ fn_info_message_select_engine(){
 		fn_info_message_starbound
 	elif [ "${shortname}" == "sbots" ]; then
 		fn_info_message_sbots
-	elif [ "${shortname}" == "ss3" ]; then
-		fn_info_message_ss3
 	elif [ "${shortname}" == "terraria" ]; then
 		fn_info_message_terraria
 	elif [ "${shortname}" == "ts3" ]; then
@@ -1544,24 +1600,16 @@ fn_info_message_select_engine(){
 		fn_info_message_unturned
 	elif [ "${shortname}" == "ut" ]; then
 		fn_info_message_ut
-	elif [ "${shortname}" == "mc" ]; then
-		fn_info_message_minecraft
-	elif [ "${shortname}" == "mh" ]; then
-		fn_info_message_mordhau
-	elif [ "${shortname}" == "mohaa" ]; then
-		fn_info_message_mohaa
-	elif [ "${shortname}" == "mta" ]; then
-		fn_info_message_mta
-	elif [ "${shortname}" == "mumble" ]; then
-		fn_info_message_mumble
-	elif [ "${shortname}" == "bf1942" ]; then
-		fn_info_message_bf1942
-	elif [ "${shortname}" == "bfv" ]; then
-		fn_info_message_bfv
+	elif [ "${shortname}" == "vh" ]; then
+		fn_info_message_vh
 	elif [ "${shortname}" == "rtcw" ]; then
 		fn_info_message_rtcw
+	elif [ "${shortname}" == "pvr" ]; then
+		fn_info_message_pavlovvr
 	elif [ "${shortname}" == "rust" ]; then
 		fn_info_message_rust
+	elif [ "${shortname}" == "vints" ]; then
+		fn_info_message_vintagestory
 	elif [ "${shortname}" == "wf" ]; then
 		fn_info_message_warfork
 	elif [ "${shortname}" == "wurm" ]; then
