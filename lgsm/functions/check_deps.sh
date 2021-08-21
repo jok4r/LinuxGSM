@@ -186,7 +186,7 @@ if [ "${javacheck}" == "1" ]; then
 		# Define required dependencies for SteamCMD.
 		if [ "${appid}" ]; then
 			# lib32gcc1 is now called lib32gcc-s1 in debian 11
-			if { [ "${distroid}" == "debian" ]&&[ "${distroversion}" == "11" ]; }||{ [ "${distroid}" == "ubuntu" ]&&[ "${distroversion}" == "20.10" ]; } || { [ "${distroid}" == "ubuntu" ]&&[ "${distroversion}" == "21.04" ]; } || { [ "${distroid}" == "pop" ]&&[ "${distroversion}" == "20.10" ]; }; then
+			if { [ "${distroid}" == "debian" ]&&[ "${distroversion}" == "11" ]; }||{ [ "${distroid}" == "ubuntu" ]&&[ "${distroversion}" == "20.10" ]; }||{ [ "${distroid}" == "ubuntu" ]&&[ "${distroversion}" == "21.04" ]; } || { [ "${distroid}" == "pop" ]&&[ "${distroversion}" == "20.10" ]; }; then
 				if [ "${deptocheck}" ==  "glibc.i686" ]||[ "${deptocheck}" ==  "libstdc++64.i686" ]||[ "${deptocheck}" ==  "lib32gcc-s1" ]||[ "${deptocheck}" ==  "lib32stdc++6" ]; then
 					steamcmdfail=1
 				fi
