@@ -367,6 +367,13 @@ elif [ "${shortname}" == "cscz" ]; then
 	fn_default_config_remote
 	fn_set_config_vars
 	fn_list_config_locations
+elif [ "${shortname}" == "cs2" ]; then
+	gamedirname="CounterStrike2"
+	array_configs+=(server.cfg)
+	fn_fetch_default_config
+	fn_default_config_remote
+	fn_set_config_vars
+	fn_list_config_locations
 elif [ "${shortname}" == "csgo" ]; then
 	gamedirname="CounterStrikeGlobalOffensive"
 	array_configs+=(server.cfg)
