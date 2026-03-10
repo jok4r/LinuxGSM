@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM fix_av.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Resolves issues with Avorion.
 
@@ -13,7 +13,6 @@ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${serverfiles}:${serverfiles}/linux64"
 if [ ! -f "${servercfgfullpath}" ]; then
 	startparameters="--datapath ${avdatapath} --galaxy-name ${selfname} --init-folders-only"
 	fn_print_information "starting ${gamename} server to generate configs."
-	fn_sleep_time
 	cd "${systemdir}" || exit
 	eval "${executable} ${startparameters}"
 fi

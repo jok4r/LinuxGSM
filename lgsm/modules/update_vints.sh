@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM update_vints.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Handles updating of Vintage Story servers.
 
@@ -34,13 +34,15 @@ fn_update_localbuild() {
 }
 
 fn_update_remotebuild() {
-	# Get remote build info.
+	# Gets remote build info.
 	apiurl="http://api.vintagestory.at/stable-unstable.json"
 	remotebuildresponse=$(curl -s "${apiurl}")
 	if [ "${branch}" == "stable" ]; then
 		remotebuildversion=$(echo "${remotebuildresponse}" | jq -r '[ to_entries[] ] | .[].key' | grep -Ev "\-rc|\-pre" | sort -r -V | head -1)
-	else
+	elif [ "${branch}" == "unstable" ]; then
 		remotebuildversion=$(echo "${remotebuildresponse}" | jq -r '[ to_entries[] ] | .[].key' | grep -E "\-rc|\-pre" | sort -r -V | head -1)
+	else
+		remotebuildversion="${branch}"
 	fi
 	remotebuildfilename=$(echo "${remotebuildresponse}" | jq --arg remotebuildversion "${remotebuildversion}" -r '.[$remotebuildversion].linuxserver.filename')
 	remotebuildurl=$(echo "${remotebuildresponse}" | jq --arg remotebuildversion "${remotebuildversion}" -r '.[$remotebuildversion].linuxserver.urls.cdn')
@@ -51,7 +53,7 @@ fn_update_remotebuild() {
 		# Checks if remotebuildversion variable has been set.
 		if [ -z "${remotebuildversion}" ] || [ "${remotebuildversion}" == "null" ]; then
 			fn_print_fail "Checking remote build: ${remotelocation}"
-			fn_script_log_fatal "Checking remote build"
+			fn_script_log_fail "Checking remote build"
 			core_exit.sh
 		else
 			fn_print_ok "Checking remote build: ${remotelocation}"
@@ -61,7 +63,7 @@ fn_update_remotebuild() {
 		# Checks if remotebuild variable has been set.
 		if [ -z "${remotebuildversion}" ] || [ "${remotebuildversion}" == "null" ]; then
 			fn_print_failure "Unable to get remote build"
-			fn_script_log_fatal "Unable to get remote build"
+			fn_script_log_fail "Unable to get remote build"
 			core_exit.sh
 		fi
 	fi
@@ -109,7 +111,7 @@ fn_update_compare() {
 					command_start.sh
 					fn_firstcommand_reset
 					exitbypass=1
-					sleep 5
+					fn_sleep_time_5
 					command_stop.sh
 					fn_firstcommand_reset
 				fi
@@ -159,6 +161,12 @@ fn_update_compare() {
 
 # The location where the builds are checked and downloaded.
 remotelocation="vintagestory.at"
+
+if [ ! "$(command -v jq 2> /dev/null)" ]; then
+	fn_print_fail_nl "jq is not installed"
+	fn_script_log_fail "jq is not installed"
+	core_exit.sh
+fi
 
 if [ "${firstcommandname}" == "INSTALL" ]; then
 	fn_update_remotebuild

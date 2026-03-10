@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM core_getopt.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: getopt arguments.
 
@@ -22,7 +22,7 @@ cmd_update_linuxgsm=("ul;update-lgsm;uf;update-modules" "command_update_linuxgsm
 cmd_test_alert=("ta;test-alert" "command_test_alert.sh" "Send a test alert.")
 cmd_monitor=("m;monitor" "command_monitor.sh" "Check server status and restart if crashed.")
 cmd_skeleton=("sk;skeleton" "command_skeleton.sh" "Create a skeleton directory.")
-cmd_sponsor=("s;sponsor" "command_sponsor.sh" "Donation options.")
+cmd_sponsor=("s;sponsor" "command_sponsor.sh" "Sponsorship options.")
 cmd_send=("sd;send" "command_send.sh" "Send command to game server console.")
 # Console servers only.
 cmd_console=("c;console" "command_console.sh" "Access server console.")
@@ -42,19 +42,20 @@ cmd_change_password=("pw;change-password" "command_ts3_server_pass.sh" "Change T
 cmd_install_default_resources=("ir;install-default-resources" "command_install_resources_mta.sh" "Install the MTA default resources.")
 cmd_fullwipe=("fw;full-wipe;wa;wipeall" "serverwipe=1; command_wipe.sh" "Reset the map and remove blueprint data.")
 cmd_mapwipe=("mw;map-wipe;w;wipe;wi" "mapwipe=1; command_wipe.sh" "Reset the map and keep blueprint data.")
-cmd_map_compressor_u99=("mc;map-compressor" "compress_ut99_maps.sh" "Compresses all ${gamename} server maps.")
-cmd_map_compressor_u2=("mc;map-compressor" "compress_unreal2_maps.sh" "Compresses all ${gamename} server maps.")
+cmd_map_compressor_unreal=("mc;map-compressor" "compress_unreal_maps.sh" "Compresses all ${gamename} server maps.")
 cmd_install_cdkey=("cd;server-cd-key" "install_ut2k4_key.sh" "Add your server cd key.")
 cmd_install_dst_token=("ct;cluster-token" "install_dst_token.sh" "Configure cluster token.")
 cmd_install_squad_license=("li;license" "install_squad_license.sh" "Add your Squad server license.")
 cmd_fastdl=("fd;fastdl" "command_fastdl.sh" "Build a FastDL directory.")
 # Dev commands.
 cmd_dev_debug=("dev;developer" "command_dev_debug.sh" "Enable developer Mode.")
-cmd_dev_details=("ddt;detect-details" "command_dev_details.sh" "Display parsed details.")
+cmd_dev_parse_game_details=("pgd;parse-game-details" "command_dev_parse_game_details.sh" "Display parsed gameserver details.")
+cmd_dev_parse_distro_details=("pdd;parse-distro-details" "command_dev_parse_distro_details.sh" "Display parsed distro details.")
 cmd_dev_detect_deps=("dd;detect-deps" "command_dev_detect_deps.sh" "Detect required dependencies.")
 cmd_dev_detect_glibc=("dg;detect-glibc" "command_dev_detect_glibc.sh" "Detect required glibc.")
 cmd_dev_detect_ldd=("dl;detect-ldd" "command_dev_detect_ldd.sh" "Detect required dynamic dependencies.")
 cmd_dev_query_raw=("qr;query-raw" "command_dev_query_raw.sh" "The raw output of gamedig and gsquery.")
+cmd_dev_ui=("ui;ui" "command_dev_ui.sh" "Assist with UI development.")
 cmd_dev_clear_modules=("cm;clear-modules" "command_dev_clear_modules.sh" "Delete the contents of the modules dir.")
 
 ### Set specific opt here.
@@ -94,7 +95,7 @@ fi
 ## Game server exclusive commands.
 
 # FastDL command.
-if [ "${engine}" == "source" ]; then
+if [ "${engine}" == "source" ] || [ "${engine}" == "goldsrc" ]; then
 	currentopt+=("${cmd_fastdl[@]}")
 fi
 
@@ -111,13 +112,13 @@ fi
 # Unreal exclusive.
 if [ "${engine}" == "unreal2" ]; then
 	if [ "${shortname}" == "ut2k4" ]; then
-		currentopt+=("${cmd_install_cdkey[@]}" "${cmd_map_compressor_u2[@]}")
+		currentopt+=("${cmd_install_cdkey[@]}" "${cmd_map_compressor_unreal[@]}")
 	else
-		currentopt+=("${cmd_map_compressor_u2[@]}")
+		currentopt+=("${cmd_map_compressor_unreal[@]}")
 	fi
 fi
 if [ "${engine}" == "unreal" ]; then
-	currentopt+=("${cmd_map_compressor_u99[@]}")
+	currentopt+=("${cmd_map_compressor_unreal[@]}")
 fi
 
 # DST exclusive.
@@ -146,7 +147,7 @@ currentopt+=("${cmd_install[@]}" "${cmd_auto_install[@]}")
 ## Developer commands.
 currentopt+=("${cmd_dev_debug[@]}")
 if [ -f ".dev-debug" ]; then
-	currentopt+=("${cmd_dev_details[@]}" "${cmd_dev_detect_deps[@]}" "${cmd_dev_detect_glibc[@]}" "${cmd_dev_detect_ldd[@]}" "${cmd_dev_query_raw[@]}" "${cmd_dev_clear_modules[@]}")
+	currentopt+=("${cmd_dev_parse_game_details[@]}" "${cmd_dev_parse_distro_details[@]}" "${cmd_dev_detect_deps[@]}" "${cmd_dev_detect_glibc[@]}" "${cmd_dev_detect_ldd[@]}" "${cmd_dev_query_raw[@]}" "${cmd_dev_ui[@]}" "${cmd_dev_clear_modules[@]}")
 fi
 
 ## Sponsor.
@@ -164,19 +165,19 @@ done
 
 # Shows LinuxGSM usage.
 fn_opt_usage() {
-	echo -e "Usage: $0 [option]"
-	echo -e ""
-	echo -e "LinuxGSM - ${gamename} - Version ${version}"
-	echo -e "https://linuxgsm.com/${gameservername}"
-	echo -e ""
-	echo -e "${lightyellow}Commands${default}"
+	fn_print_nl "Usage: $0 [option]"
+	fn_print_nl ""
+	fn_print_nl "LinuxGSM - ${gamename} - Version ${version}"
+	fn_print_nl "https://linuxgsm.com/${gameservername}"
+	fn_print_nl ""
+	fn_print_nl "${bold}${lightyellow}Commands${default}"
 	# Display available commands.
 	index="0"
 	{
 		for ((index = "0"; index < ${#currentopt[@]}; index += 3)); do
 			# Hide developer commands.
 			if [ "${currentopt[index + 2]}" != "DEVCOMMAND" ]; then
-				echo -e "${cyan}$(echo -e "${currentopt[index]}" | awk -F ';' '{ print $2 }')\t${default}$(echo -e "${currentopt[index]}" | awk -F ';' '{ print $1 }')\t| ${currentopt[index + 2]}"
+				fn_print_nl "${cyan}$(echo -e "${currentopt[index]}" | awk -F ';' '{ print $2 }')\t${default}$(echo -e "${currentopt[index]}" | awk -F ';' '{ print $1 }')\t| ${currentopt[index + 2]}"
 			fi
 		done
 	} | column -s $'\t' -t

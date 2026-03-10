@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM command_start.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Starts the server.
 
@@ -73,71 +73,48 @@ fn_start_tmux() {
 	touch "${consolelog}"
 
 	# tmux compiled from source will return "master", therefore ignore it.
-	if [ "${tmuxv}" == "master" ]; then
+	if [ "${tmuxversion}" == "master" ]; then
 		fn_script_log "tmux version: master (user compiled)"
 		echo -e "tmux version: master (user compiled)" >> "${consolelog}"
-		if [ "${consolelogging}" == "on" ] || [ -z "${consolelogging}" ]; then
-			if [ "${logtimestamp}" == "on" ]; then
-				tmux -L "${socketname}" pipe-pane -o -t "${sessionname}" "exec bash -c \"cat | $addtimestamp\" >> '${consolelog}'"
-			else
-				tmux -L "${socketname}" pipe-pane -o -t "${sessionname}" "exec cat >> '${consolelog}'"
-			fi
-		fi
+	fi
 
-	elif [ -n "${tmuxv}" ]; then
-		# tmux pipe-pane not supported in tmux versions < 1.6.
-		if [ "${tmuxvdigit}" -lt "16" ]; then
-			echo -e "Console logging disabled: tmux => 1.6 required
-			https://linuxgsm.com/tmux-upgrade
-			Currently installed: $(tmux -V)" > "${consolelog}"
-
-		# Console logging disabled: Bug in tmux 1.8 breaks logging.
-		elif [ "${tmuxvdigit}" -eq "18" ]; then
-			echo -e "Console logging disabled: Bug in tmux 1.8 breaks logging
-			https://linuxgsm.com/tmux-upgrade
-			Currently installed: $(tmux -V)" > "${consolelog}"
-		# Console logging enable or not set.
-		elif [ "${consolelogging}" == "on" ] || [ -z "${consolelogging}" ]; then
-			if [ "${logtimestamp}" == "on" ]; then
-				tmux -L "${socketname}" pipe-pane -o -t "${sessionname}" "exec bash -c \"cat | $addtimestamp\" >> '${consolelog}'"
-			else
-				tmux -L "${socketname}" pipe-pane -o -t "${sessionname}" "exec cat >> '${consolelog}'"
-			fi
+	# Enable console logging.
+	if [ "${consolelogging}" == "on" ] || [ -z "${consolelogging}" ]; then
+		# timestamp will break mcb update check.
+		if [ "${logtimestamp}" == "on" ] && [ "${shortname}" != "mcb" ]; then
+			tmux -L "${socketname}" pipe-pane -o -t "${sessionname}" "exec bash -c \"cat | $addtimestamp\" >> '${consolelog}'"
+		else
+			tmux -L "${socketname}" pipe-pane -o -t "${sessionname}" "exec cat >> '${consolelog}'"
 		fi
 	else
-		echo -e "Unable to detect tmux version" >> "${consolelog}"
-		fn_script_log_warn "Unable to detect tmux version"
+		echo -e "Console logging disabled in settings" >> "${consolelog}"
+		fn_script_log_info "Console logging disabled in settings"
 	fi
 
-	# Console logging disabled.
-	if [ "${consolelogging}" == "off" ]; then
-		echo -e "Console logging disabled in settings" >> "${consolelog}"
-		fn_script_log_info "Console logging disabled by user"
-	fi
-	fn_sleep_time
+	fn_sleep_time_1
 
 	# If the server fails to start.
 	check_status.sh
 	if [ "${status}" == "0" ]; then
 		fn_print_fail_nl "Unable to start ${servername}"
-		fn_script_log_fatal "Unable to start ${servername}"
+		fn_script_log_fail "Unable to start ${servername}"
 		if [ -s "${lgsmlogdir}/.${selfname}-tmux-error.tmp" ]; then
 			fn_print_fail_nl "Unable to start ${servername}: tmux error:"
-			fn_script_log_fatal "Unable to start ${servername}: tmux error:"
+			fn_script_log_fail "Unable to start ${servername}: tmux error"
 			echo -e ""
 			echo -e "Command"
-			echo -e "================================="
+			fn_messages_separator
 			echo -e "tmux -L \"${sessionname}\" new-session -d -s \"${sessionname}\" \"${preexecutable} ${executable} ${startparameters}\"" | tee -a "${lgsmlog}"
 			echo -e ""
 			echo -e "Error"
-			echo -e "================================="
+			fn_messages_separator
 			tee -a "${lgsmlog}" < "${lgsmlogdir}/.${selfname}-tmux-error.tmp"
 
 			# Detected error https://linuxgsm.com/support
 			if grep -c "Operation not permitted" "${lgsmlogdir}/.${selfname}-tmux-error.tmp"; then
 				echo -e ""
 				echo -e "Fix"
-				echo -e "================================="
+				fn_messages_separator
 				if ! grep "tty:" /etc/group | grep "$(whoami)"; then
 					echo -e "$(whoami) is not part of the tty group."
 					fn_script_log_info "$(whoami) is not part of the tty group."
@@ -150,12 +127,12 @@ fn_start_tmux() {
 					echo -e ""
 					echo -e "	usermod -G tty $(whoami)"
 					echo -e ""
-					echo -e "https://linuxgsm.com/tmux-op-perm"
+					echo -e "${italic}https://linuxgsm.com/tmux-op-perm"
 					fn_script_log_info "https://linuxgsm.com/tmux-op-perm"
 				else
 					echo -e "No known fix currently. Please log an issue."
 					fn_script_log_info "No known fix currently. Please log an issue."
-					echo -e "https://linuxgsm.com/support"
+					echo -e "${italic}https://linuxgsm.com/support"
 					fn_script_log_info "https://linuxgsm.com/support"
 				fi
 			fi
@@ -176,6 +153,13 @@ fn_start_tmux() {
 
 		fn_print_ok "${servername}"
 		fn_script_log_pass "Started ${servername}"
+		if [ "${statusalert}" == "on" ] && [ "${firstcommandname}" == "START" ]; then
+			alert="started"
+			alert.sh
+		elif [ "${statusalert}" == "on" ] && [ "${firstcommandname}" == "RESTART" ]; then
+			alert="restarted"
+			alert.sh
+		fi
 	fi
 	rm -f "${lgsmlogdir:?}/.${selfname}-tmux-error.tmp" 2> /dev/null
 	echo -en "\n"
@@ -186,12 +170,13 @@ if [ "${firstcommandname}" == "START" ] || [ "${firstcommandname}" == "RESTART" 
 	date '+%s' > "${lockdir:?}/${selfname}-monitoring.lock"
 fi
 
+fn_print_dots ""
 check.sh
 
 # If the server already started dont start again.
 if [ "${status}" != "0" ]; then
 	fn_print_dots "${servername}"
-	fn_print_info_nl "${servername} is already running"
+	fn_print_skip_nl "${servername} is already running"
 	fn_script_log_error "${servername} is already running"
 	if [ -z "${exitbypass}" ]; then
 		# Remove starting lockfile when command ends.

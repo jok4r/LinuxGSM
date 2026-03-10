@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM command_mods_install.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Core modules for mods list/install/update/remove
 
@@ -22,7 +22,7 @@ fn_mod_install_files() {
 	# Check if variable is valid checking if file has been downloaded and exists.
 	if [ ! -f "${modstmpdir}/${modfilename}" ]; then
 		fn_print_failure "An issue occurred downloading ${modprettyname}"
-		fn_script_log_fatal "An issue occurred downloading ${modprettyname}"
+		fn_script_log_fail "An issue occurred downloading ${modprettyname}"
 		core_exit.sh
 	fi
 	if [ ! -d "${extractdest}" ]; then
@@ -57,8 +57,8 @@ fn_mod_lowercase() {
 				# Finally we can rename the file
 				mv "${src}" "${dst}"
 				# Exit if it fails for any reason
-				local exitcode=$?
-				if [ "${exitcode}" != 0 ]; then
+				exitcode=$?
+				if [ "${exitcode}" -ne 0 ]; then
 					fn_print_fail_eol_nl
 					core_exit.sh
 				fi
@@ -74,10 +74,10 @@ fn_mod_create_filelist() {
 	fn_sleep_time
 	# ${modsdir}/${modcommand}-files.txt.
 	find "${extractdest}" -mindepth 1 -printf '%P\n' > "${modsdir}/${modcommand}-files.txt"
-	local exitcode=$?
-	if [ "${exitcode}" != 0 ]; then
+	exitcode=$?
+	if [ "${exitcode}" -ne 0 ]; then
 		fn_print_fail_eol_nl
-		fn_script_log_fatal "Building ${modsdir}/${modcommand}-files.txt"
+		fn_script_log_fail "Building ${modsdir}/${modcommand}-files.txt"
 		core_exit.sh
 	else
 		fn_print_ok_eol_nl
@@ -94,10 +94,10 @@ fn_mod_copy_destination() {
 	echo -en "copying ${modprettyname} to ${modinstalldir}..."
 	fn_sleep_time
 	cp -Rf "${extractdest}/." "${modinstalldir}/"
-	local exitcode=$?
-	if [ "${exitcode}" != 0 ]; then
+	exitcode=$?
+	if [ "${exitcode}" -ne 0 ]; then
 		fn_print_fail_eol_nl
-		fn_script_log_fatal "Copying ${modprettyname} to ${modinstalldir}"
+		fn_script_log_fail "Copying ${modprettyname} to ${modinstalldir}"
 	else
 		fn_print_ok_eol_nl
 		fn_script_log_pass "Copying ${modprettyname} to ${modinstalldir}"
@@ -132,10 +132,10 @@ fn_mod_tidy_files_list() {
 		# Delete line(s) matching exactly.
 		sed -i "/^${removefilevar}$/d" "${modsdir}/${modcommand}-files.txt"
 		# Exit on error.
-		local exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
+		exitcode=$?
+		if [ "${exitcode}" -ne 0 ]; then
 			fn_print_fail_eol_nl
-			fn_script_log_fatal "Error while tidying line: ${removefilevar} from: ${modsdir}/${modcommand}-files.txt"
+			fn_script_log_fail "Error while tidying line: ${removefilevar} from: ${modsdir}/${modcommand}-files.txt"
 			core_exit.sh
 			break
 		fi
@@ -228,7 +228,7 @@ fn_mod_get_info() {
 # Define all variables for a mod at once when index is set to a separator.
 fn_mods_define() {
 	if [ -z "$index" ]; then
-		fn_script_log_fatal "index variable not set. Please report an issue."
+		fn_script_log_fail "index variable not set. Please report an issue."
 		fn_print_error "index variable not set. Please report an issue."
 		echo -e "* https://github.com/GameServerManagers/LinuxGSM/issues"
 		core_exit.sh
@@ -388,9 +388,9 @@ fn_create_mods_dir() {
 		echo -en "creating LinuxGSM mods data directory ${modsdir}..."
 		mkdir -p "${modsdir}"
 		exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
+		if [ "${exitcode}" -ne 0 ]; then
 			fn_print_fail_eol_nl
-			fn_script_log_fatal "Creating mod download dir ${modsdir}"
+			fn_script_log_fail "Creating mod download dir ${modsdir}"
 			core_exit.sh
 		else
 			fn_print_ok_eol_nl
@@ -402,9 +402,9 @@ fn_create_mods_dir() {
 		echo -en "creating mods install directory ${modinstalldir}..."
 		mkdir -p "${modinstalldir}"
 		exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
+		if [ "${exitcode}" -ne 0 ]; then
 			fn_print_fail_eol_nl
-			fn_script_log_fatal "Creating mod install directory ${modinstalldir}"
+			fn_script_log_fail "Creating mod install directory ${modinstalldir}"
 			core_exit.sh
 		else
 			fn_print_ok_eol_nl
@@ -412,7 +412,7 @@ fn_create_mods_dir() {
 		fi
 	fi
 
-	# Create lgsm/data/${modsinstalledlist}.
+	# Create ${datadir}/${modsinstalledlist}.
 	if [ ! -f "${modsinstalledlistfullpath}" ]; then
 		touch "${modsinstalledlistfullpath}"
 		fn_script_log_info "Created ${modsinstalledlistfullpath}"
@@ -425,9 +425,9 @@ fn_mods_create_tmp_dir() {
 		mkdir -p "${modstmpdir}"
 		exitcode=$?
 		echo -en "creating mod download directory ${modstmpdir}..."
-		if [ "${exitcode}" != 0 ]; then
+		if [ "${exitcode}" -ne 0 ]; then
 			fn_print_fail_eol_nl
-			fn_script_log_fatal "Creating mod download directory ${modstmpdir}"
+			fn_script_log_fail "Creating mod download directory ${modstmpdir}"
 			core_exit.sh
 		else
 			fn_print_ok_eol_nl
@@ -442,9 +442,9 @@ fn_mods_clear_tmp_dir() {
 		echo -en "clearing mod download directory ${modstmpdir}..."
 		rm -rf "${modstmpdir:?}"
 		exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
+		if [ "${exitcode}" -ne 0 ]; then
 			fn_print_fail_eol_nl
-			fn_script_log_fatal "Clearing mod download directory ${modstmpdir}"
+			fn_script_log_fail "Clearing mod download directory ${modstmpdir}"
 			core_exit.sh
 		else
 			fn_print_ok_eol_nl
@@ -491,12 +491,12 @@ fn_check_mod_files_list() {
 		if [ "${modsfilelistsize}" -eq 0 ]; then
 			fn_print_failure "${modcommand}-files.txt is empty"
 			echo -e "* Unable to remove ${modprettyname}"
-			fn_script_log_fatal "${modcommand}-files.txt is empty: Unable to remove ${modprettyname}."
+			fn_script_log_fail "${modcommand}-files.txt is empty: Unable to remove ${modprettyname}."
 			core_exit.sh
 		fi
 	else
 		fn_print_failure "${modsdir}/${modcommand}-files.txt does not exist"
-		fn_script_log_fatal "${modsdir}/${modcommand}-files.txt does not exist: Unable to remove ${modprettyname}."
+		fn_script_log_fail "${modsdir}/${modcommand}-files.txt does not exist: Unable to remove ${modprettyname}."
 		core_exit.sh
 	fi
 }
@@ -519,7 +519,7 @@ fn_mod_exist() {
 fn_mod_required_fail_exist() {
 	modreq=$1
 	# requires one parameter, the mod
-	fn_script_log_fatal "${modreq}-files.txt is empty: unable to find ${modreq} installed"
+	fn_script_log_fail "${modreq}-files.txt is empty: unable to find ${modreq} installed"
 	echo -en "* Unable to find '${modreq}' which is required prior to installing this mod..."
 	fn_print_fail_eol_nl
 	core_exit.sh
@@ -580,8 +580,8 @@ fn_mod_install_liblist_gam_file() {
 		grep -q "addons/metamod/dlls/metamod.dll" "${modinstalldir}/liblist.gam"
 		exitcode=$?
 		# if replacement back didn't happen, error out.
-		if [ "${exitcode}" != 0 ]; then
-			fn_script_log_fatal "${logentry}"
+		if [ "${exitcode}" -ne 0 ]; then
+			fn_script_log_fail "${logentry}"
 			fn_print_fail_eol_nl
 		else
 			fn_script_log_pass "${logentry}"
@@ -596,8 +596,8 @@ fn_mod_install_liblist_gam_file() {
 		grep -q "addons/metamod/dlls/metamod.so" "${modinstalldir}/liblist.gam"
 		exitcode=$?
 		# if replacement back didn't happen, error out
-		if [ "${exitcode}" != 0 ]; then
-			fn_script_log_fatal "${logentry}"
+		if [ "${exitcode}" -ne 0 ]; then
+			fn_script_log_fail "${logentry}"
 			fn_print_fail_eol_nl
 		else
 			fn_script_log_pass "${logentry}"
@@ -614,11 +614,11 @@ fn_mod_install_liblist_gam_file() {
 			grep -q "addons/metamod/dlls/metamod.dylib" "${modinstalldir}/liblist.gam"
 			exitcode=$?
 			# if replacement back didn't happen, error out.
-			if [ "${exitcode}" != 0 ]; then
-				fn_script_log_fatal "${logentry}"
+			if [ "${exitcode}" -ne 0 ]; then
+				fn_script_log_fail "${logentry}"
 				fn_print_fail_eol_nl
 			else
-				fn_script_log_pass ${logentry}
+				fn_script_log_pass "${logentry}"
 				fn_print_ok_eol_nl
 			fi
 		fi
@@ -638,11 +638,11 @@ fn_mod_remove_liblist_gam_file() {
 		grep -q "${moddll}" "${modinstalldir}/liblist.gam"
 		exitcode=$?
 		# if replacement back didn't happen, error out.
-		if [ "${exitcode}" != 0 ]; then
-			fn_script_log_fatal "${logentry}"
+		if [ "${exitcode}" -ne 0 ]; then
+			fn_script_log_fail "${logentry}"
 			fn_print_fail_eol_nl
 		else
-			fn_script_log_pass ${logentry}
+			fn_script_log_pass "${logentry}"
 			fn_print_ok_eol_nl
 		fi
 
@@ -654,11 +654,11 @@ fn_mod_remove_liblist_gam_file() {
 		grep -q "${modso}" "${modinstalldir}/liblist.gam"
 		exitcode=$?
 		# if replacement back didn't happen, error out
-		if [ "${exitcode}" != 0 ]; then
-			fn_script_log_fatal "${logentry}"
+		if [ "${exitcode}" -ne 0 ]; then
+			fn_script_log_fail "${logentry}"
 			fn_print_fail_eol_nl
 		else
-			fn_script_log_pass ${logentry}
+			fn_script_log_pass "${logentry}"
 			fn_print_ok_eol_nl
 		fi
 
@@ -672,11 +672,11 @@ fn_mod_remove_liblist_gam_file() {
 			grep -q "${moddylib}" "${modinstalldir}/liblist.gam"
 			# if replacement back didn't happen, error out.
 			exitcode=$?
-			if [ "${exitcode}" != 0 ]; then
-				fn_script_log_fatal "${logentry}"
+			if [ "${exitcode}" -ne 0 ]; then
+				fn_script_log_fail "${logentry}"
 				fn_print_fail_eol_nl
 			else
-				fn_script_log_pass ${logentry}
+				fn_script_log_pass "${logentry}"
 				fn_print_ok_eol_nl
 			fi
 		fi
@@ -691,15 +691,15 @@ fn_mod_install_amxmodx_file() {
 		echo -en "adding amxmodx_mm_i386.so in plugins.ini..."
 		grep -q "amxmodx_mm_i386.so" "${modinstalldir}/addons/metamod/plugins.ini"
 		exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
+		if [ "${exitcode}" -ne 0 ]; then
 			# file exists but the entry does not, let's add it
 			echo "linux addons/amxmodx/dlls/amxmodx_mm_i386.so" >> "${modinstalldir}/addons/metamod/plugins.ini"
 			exitcode=$?
-			if [ "${exitcode}" != 0 ]; then
-				fn_script_log_fatal "${logentry}"
+			if [ "${exitcode}" -ne 0 ]; then
+				fn_script_log_fail "${logentry}"
 				fn_print_fail_eol_nl
 			else
-				fn_script_log_pass ${logentry}
+				fn_script_log_pass "${logentry}"
 				fn_print_ok_eol_nl
 			fi
 		fi
@@ -707,12 +707,12 @@ fn_mod_install_amxmodx_file() {
 		# create new file and add the mod to it
 		echo "linux addons/amxmodx/dlls/amxmodx_mm_i386.so" > "${modinstalldir}/addons/metamod/plugins.ini"
 		exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
-			fn_script_log_fatal "${logentry}"
+		if [ "${exitcode}" -ne 0 ]; then
+			fn_script_log_fail "${logentry}"
 			fn_print_fail_eol_nl
 			core_exit.sh
 		else
-			fn_script_log_pass ${logentry}
+			fn_script_log_pass "${logentry}"
 			fn_print_ok_eol_nl
 		fi
 	fi
@@ -726,17 +726,17 @@ fn_mod_remove_amxmodx_file() {
 		grep -q "linux addons/amxmodx/dlls/amxmodx_mm_i386.so" "${modinstalldir}/addons/metamod/plugins.ini"
 		# iIs it found? If so remove it and clean up
 		exitcode=$?
-		if [ "${exitcode}" == 0 ]; then
+		if [ "${exitcode}" -eq 0 ]; then
 			# delete the line we inserted
 			sed -i '/linux addons\/amxmodx\/dlls\/amxmodx_mm_i386.so/d' "${modinstalldir}/addons/metamod/plugins.ini"
 			# remove empty lines
 			sed -i '/^$/d' "${modinstalldir}/addons/metamod/plugins.ini"
 			exitcode=$?
-			if [ "${exitcode}" != 0 ]; then
-				fn_script_log_fatal "${logentry}"
+			if [ "${exitcode}" -ne 0 ]; then
+				fn_script_log_fail "${logentry}"
 				fn_print_fail_eol_nl
 			else
-				fn_script_log_pass ${logentry}
+				fn_script_log_pass "${logentry}"
 				fn_print_ok_eol_nl
 			fi
 

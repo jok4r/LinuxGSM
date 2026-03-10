@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM core_dl.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Deals with all downloads for LinuxGSM.
 
@@ -20,6 +20,7 @@
 moduleselfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 fn_dl_steamcmd() {
+	remotelocation="SteamCMD"
 	fn_print_start_nl "${remotelocation}"
 	fn_script_log_info "${commandaction} ${selfname}: ${remotelocation}"
 	if [ -n "${branch}" ]; then
@@ -53,7 +54,7 @@ fn_dl_steamcmd() {
 		rm -f "${steamcmdlog:?}"
 	fi
 	counter=0
-	while [ "${counter}" == "0" ] || [ "${exitcode}" != "0" ]; do
+	while [ "${counter}" -eq 0 ] || [ "${exitcode}" -ne 0 ]; do
 		counter=$((counter + 1))
 		# Select SteamCMD parameters
 		# If GoldSrc (appid 90) servers. GoldSrc (appid 90) require extra commands.
@@ -93,27 +94,27 @@ fn_dl_steamcmd() {
 			# Not enough space.
 			if [ -n "$(grep "0x202" "${steamcmdlog}" | tail -1)" ]; then
 				fn_print_failure_nl "${commandaction} ${selfname}: ${remotelocation}: Not enough disk space to download server files"
-				fn_script_log_fatal "${commandaction} ${selfname}: ${remotelocation}: Not enough disk space to download server files"
+				fn_script_log_fail "${commandaction} ${selfname}: ${remotelocation}: Not enough disk space to download server files"
 				core_exit.sh
 				# Not enough space.
 			elif [ -n "$(grep "0x212" "${steamcmdlog}" | tail -1)" ]; then
 				fn_print_failure_nl "${commandaction} ${selfname}: ${remotelocation}: Not enough disk space to download server files"
-				fn_script_log_fatal "${commandaction} ${selfname}: ${remotelocation}: Not enough disk space to download server files"
+				fn_script_log_fail "${commandaction} ${selfname}: ${remotelocation}: Not enough disk space to download server files"
 				core_exit.sh
 			# Need tp purchase game.
 			elif [ -n "$(grep "No subscription" "${steamcmdlog}" | tail -1)" ]; then
 				fn_print_failure_nl "${commandaction} ${selfname}: ${remotelocation}: Steam account does not have a license for the required game"
-				fn_script_log_fatal "${commandaction} ${selfname}: ${remotelocation}: Steam account does not have a license for the required game"
+				fn_script_log_fail "${commandaction} ${selfname}: ${remotelocation}: Steam account does not have a license for the required game"
 				core_exit.sh
 			# Two-factor authentication failure
 			elif [ -n "$(grep "Two-factor code mismatch" "${steamcmdlog}" | tail -1)" ]; then
 				fn_print_failure_nl "${commandaction} ${selfname}: ${remotelocation}: Two-factor authentication failure"
-				fn_script_log_fatal "${commandaction} ${selfname}: ${remotelocation}: Two-factor authentication failure"
+				fn_script_log_fail "${commandaction} ${selfname}: ${remotelocation}: Two-factor authentication failure"
 				core_exit.sh
 			# Incorrect Branch password
 			elif [ -n "$(grep "Password check for AppId" "${steamcmdlog}" | tail -1)" ]; then
 				fn_print_failure_nl "${commandaction} ${selfname}: ${remotelocation}: betapassword is incorrect"
-				fn_script_log_fatal "${commandaction} ${selfname}: ${remotelocation}: betapassword is incorrect"
+				fn_script_log_fail "${commandaction} ${selfname}: ${remotelocation}: betapassword is incorrect"
 				core_exit.sh
 			# Update did not finish.
 			elif [ -n "$(grep "0x402" "${steamcmdlog}" | tail -1)" ] || [ -n "$(grep "0x602" "${steamcmdlog}" | tail -1)" ]; then
@@ -127,22 +128,25 @@ fn_dl_steamcmd() {
 			elif [ -n "$(grep "0x626" "${steamcmdlog}" | tail -1)" ] || [ -n "$(grep "0x626" "${steamcmdlog}" | tail -1)" ]; then
 				fn_print_error2_nl "${commandaction} ${selfname}: ${remotelocation}: Missing update files"
 				fn_script_log_error "${commandaction} ${selfname}: ${remotelocation}: Missing update files"
+			elif [ -n "$(grep "0x6A6" "${steamcmdlog}" | tail -1)" ]; then
+				fn_print_error2_nl "${commandaction} ${selfname}: ${remotelocation}: Corrupt update files"
+				fn_script_log_error "${commandaction} ${selfname}: ${remotelocation}: Corrupt update files"
 			else
 				fn_print_error2_nl "${commandaction} ${selfname}: ${remotelocation}: Unknown error occured"
-				echo -en "Please provide content log to LinuxGSM developers https://linuxgsm.com/steamcmd-error"
+				fn_print_nl "Please provide content log to LinuxGSM developers https://linuxgsm.com/steamcmd-error"
 				fn_script_log_error "${commandaction} ${selfname}: ${remotelocation}: Unknown error occured"
 			fi
-		elif [ "${exitcode}" != 0 ]; then
+		elif [ "${exitcode}" -ne 0 ]; then
 			fn_print_error2_nl "${commandaction} ${selfname}: ${remotelocation}: Exit code: ${exitcode}"
 			fn_script_log_error "${commandaction} ${selfname}: ${remotelocation}: Exit code: ${exitcode}"
 		else
-			fn_print_complete_nl "${commandaction} ${selfname}: ${remotelocation}"
+			fn_print_success_nl "${commandaction} ${selfname}: ${remotelocation}"
 			fn_script_log_pass "${commandaction} ${selfname}: ${remotelocation}"
 		fi
 
 		if [ "${counter}" -gt "10" ]; then
 			fn_print_failure_nl "${commandaction} ${selfname}: ${remotelocation}: Did not complete the download, too many retrys"
-			fn_script_log_fatal "${commandaction} ${selfname}: ${remotelocation}: Did not complete the download, too many retrys"
+			fn_script_log_fail "${commandaction} ${selfname}: ${remotelocation}: Did not complete the download, too many retrys"
 			core_exit.sh
 		fi
 	done
@@ -150,16 +154,16 @@ fn_dl_steamcmd() {
 
 # Emptys contents of the LinuxGSM tmpdir.
 fn_clear_tmp() {
-	echo -en "clearing LinuxGSM tmp directory..."
+	echo -en "clearing tmp directory [ ${italic}${tmpdir}${default} ]"
 	if [ -d "${tmpdir}" ]; then
 		rm -rf "${tmpdir:?}/"*
-		local exitcode=$?
-		if [ "${exitcode}" != 0 ]; then
+		exitcode=$?
+		if [ "${exitcode}" -ne 0 ]; then
 			fn_print_error_eol_nl
-			fn_script_log_error "clearing LinuxGSM tmp directory"
+			fn_script_log_error "clearing tmp directory ${tmpdir}"
 		else
 			fn_print_ok_eol_nl
-			fn_script_log_pass "clearing LinuxGSM tmp directory"
+			fn_script_log_pass "clearing tmp directory ${tmpdir}"
 		fi
 	fi
 }
@@ -195,7 +199,7 @@ fn_dl_hash() {
 			fn_print_fail_eol_nl
 			echo -e "${local_filename} returned ${hashtype} checksum: ${hashsumcmd}"
 			echo -e "expected ${hashtype} checksum: ${hash}"
-			fn_script_log_fatal "Verifying ${local_filename} with ${hashtype}"
+			fn_script_log_fail "Verifying ${local_filename} with ${hashtype}"
 			fn_script_log_info "${local_filename} returned ${hashtype} checksum: ${hashsumcmd}"
 			fn_script_log_info "Expected ${hashtype} checksum: ${hash}"
 			core_exit.sh
@@ -226,8 +230,8 @@ fn_dl_extract() {
 	if [ ! -f "${local_filedir}/${local_filename}" ]; then
 		fn_print_fail_eol_nl
 		echo -en "file ${local_filedir}/${local_filename} not found"
-		fn_script_log_fatal "Extracting ${local_filename}"
-		fn_script_log_fatal "File ${local_filedir}/${local_filename} not found"
+		fn_script_log_fail "Extracting ${local_filename}"
+		fn_script_log_fail "File ${local_filedir}/${local_filename} not found"
 		core_exit.sh
 	fi
 	mime=$(file -b --mime-type "${local_filedir}/${local_filename}")
@@ -251,15 +255,18 @@ fn_dl_extract() {
 		fi
 	elif [ "${mime}" == "application/zip" ]; then
 		if [ -n "${extractsrc}" ]; then
-			extractcmd=$(unzip -qoj -d "${extractdest}" "${local_filedir}/${local_filename}" "${extractsrc}"/*)
+			temp_extractdir="${tmpdir}/Xonotic"
+			extractcmd=$(unzip -qo "${local_filedir}/${local_filename}" "${extractsrc}/*" -d "${temp_extractdir}")
+			find "${temp_extractdir}/${extractsrc}" -mindepth 1 -maxdepth 1 -exec mv -t "${extractdest}" {} +
+			rm -rf "${temp_extractdir}"
 		else
 			extractcmd=$(unzip -qo -d "${extractdest}" "${local_filedir}/${local_filename}")
 		fi
 	fi
-	local exitcode=$?
-	if [ "${exitcode}" != 0 ]; then
+	exitcode=$?
+	if [ "${exitcode}" -ne 0 ]; then
 		fn_print_fail_eol_nl
-		fn_script_log_fatal "Extracting ${local_filename}"
+		fn_script_log_fail "Extracting ${local_filename}"
 		if [ -f "${lgsmlog}" ]; then
 			echo -e "${extractcmd}" >> "${lgsmlog}"
 		fi
@@ -274,12 +281,11 @@ fn_dl_extract() {
 # Trap to remove file download if canceled before completed.
 fn_fetch_trap() {
 	echo -e ""
-	echo -en "downloading ${local_filename}..."
+	echo -en "downloading ${local_filename}"
 	fn_print_canceled_eol_nl
 	fn_script_log_info "Downloading ${local_filename}...CANCELED"
-	fn_sleep_time
 	rm -f "${local_filedir:?}/${local_filename}"
-	echo -en "downloading ${local_filename}..."
+	echo -en "downloading ${local_filename}"
 	fn_print_removed_eol_nl
 	fn_script_log_info "Downloading ${local_filename}...REMOVED"
 	core_exit.sh
@@ -311,17 +317,17 @@ fn_check_file() {
 			fileurl_name="${remote_fileurl_backup_name}"
 		fi
 		counter=$((counter + 1))
-		echo -en "checking ${fileurl_name} ${remote_filename}...\c"
+		echo -e "checking ${fileurl_name} ${remote_filename}\c"
 		curlcmd=$(curl --output /dev/null --silent --head --fail "${fileurl}" 2>&1)
-		local exitcode=$?
+		exitcode=$?
 
 		# On first try will error. On second try will fail.
-		if [ "${exitcode}" != 0 ]; then
+		if [ "${exitcode}" -ne 0 ]; then
 			if [ ${counter} -ge 2 ]; then
 				fn_print_fail_eol_nl
 				if [ -f "${lgsmlog}" ]; then
-					fn_script_log_fatal "Checking ${remote_filename}"
-					fn_script_log_fatal "${fileurl}"
+					fn_script_log_fail "Checking ${remote_filename}"
+					fn_script_log_fail "${fileurl}"
 					checkflag=1
 				fi
 			else
@@ -377,6 +383,7 @@ fn_fetch_file() {
 			counter=1
 			remote_fileurls_array=(remote_fileurl)
 		fi
+
 		for remote_fileurl_array in "${remote_fileurls_array[@]}"; do
 			if [ "${remote_fileurl_array}" == "remote_fileurl" ]; then
 				fileurl="${remote_fileurl}"
@@ -391,21 +398,21 @@ fn_fetch_file() {
 			fi
 			# Trap will remove part downloaded files if canceled.
 			trap fn_fetch_trap INT
-			curlcmd=(curl --connect-timeout 10 --fail -L -o "${local_filedir}/${local_filename}" --retry 2)
+			curlcmd=(curl --connect-timeout 3 --fail -L -o "${local_filedir}/${local_filename}" --retry 2 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.${randomint}.212 Safari/537.36")
 
 			# if is large file show progress, else be silent
 			local exitcode=""
 			large_files=("bz2" "gz" "zip" "jar" "xz")
 			if grep -qE "(^|\s)${local_filename##*.}(\s|$)" <<< "${large_files[@]}"; then
-				echo -en "downloading ${local_filename}..."
+				echo -e "downloading file [ ${italic}${local_filename}${default} ]"
 				fn_sleep_time
-				echo -en "\033[1K"
 				"${curlcmd[@]}" --progress-bar "${fileurl}" 2>&1
-				exitcode="$?"
+				exitcode=$?
+				echo -en "downloading file [ ${italic}${local_filename}${default} ]"
 			else
-				echo -en "fetching ${fileurl_name} ${local_filename}...\c"
+				echo -en "fetching ${fileurl_name} [ ${italic}${local_filename}${default} ]\c"
 				"${curlcmd[@]}" --silent --show-error "${fileurl}" 2>&1
-				exitcode="$?"
+				exitcode=$?
 			fi
 
 			# Download will fail if downloads a html file.
@@ -417,12 +424,12 @@ fn_fetch_file() {
 			fi
 
 			# On first try will error. On second try will fail.
-			if [ "${exitcode}" != 0 ]; then
+			if [ "${exitcode}" -ne 0 ]; then
 				if [ ${counter} -ge 2 ]; then
 					fn_print_fail_eol_nl
 					if [ -f "${lgsmlog}" ]; then
-						fn_script_log_fatal "Downloading ${local_filename}..."
-						fn_script_log_fatal "${fileurl}"
+						fn_script_log_fail "Downloading ${local_filename}..."
+						fn_script_log_fail "${fileurl}"
 					fi
 					core_exit.sh
 				else
@@ -482,12 +489,8 @@ fn_fetch_file() {
 fn_fetch_file_github() {
 	github_file_url_dir="${1}"
 	github_file_url_name="${2}"
-	# For legacy versions - code can be removed at a future date
-	if [ "${legacymode}" == "1" ]; then
-		remote_fileurl="https://raw.githubusercontent.com/${githubuser}/${githubrepo}/${githubbranch}/${github_file_url_dir}/${github_file_url_name}"
-		remote_fileurl_backup="https://bitbucket.org/${githubuser}/${githubrepo}/raw/${githubbranch}/${github_file_url_dir}/${github_file_url_name}"
 	# If master branch will currently running LinuxGSM version to prevent "version mixing". This is ignored if a fork.
-	elif [ "${githubbranch}" == "master" ] && [ "${githubuser}" == "GameServerManagers" ] && [ "${commandname}" != "UPDATE-LGSM" ]; then
+	if [ "${githubbranch}" == "master" ] && [ "${githubuser}" == "GameServerManagers" ] && [ "${commandname}" != "UPDATE-LGSM" ]; then
 		remote_fileurl="https://raw.githubusercontent.com/${githubuser}/${githubrepo}/${version}/${github_file_url_dir}/${github_file_url_name}"
 		remote_fileurl_backup="https://bitbucket.org/${githubuser}/${githubrepo}/raw/${version}/${github_file_url_dir}/${github_file_url_name}"
 	else
@@ -617,7 +620,7 @@ fn_dl_latest_release_github() {
 	# Check how many releases we got from the api and exit if we have more then one.
 	if [ "$(echo -e "${githubreleaseassets}" | jq '. | length')" -gt 1 ]; then
 		fn_print_fatal_nl "Found more than one release to download - Please report this to the LinuxGSM issue tracker"
-		fn_script_log_fatal "Found more than one release to download - Please report this to the LinuxGSM issue tracker"
+		fn_script_log_fail "Found more than one release to download - Please report this to the LinuxGSM issue tracker"
 	else
 		# Set variables for download via fn_fetch_file.
 		githubreleasefilename=$(echo -e "${githubreleaseassets}" | jq -r '.[]name')
@@ -626,7 +629,7 @@ fn_dl_latest_release_github() {
 		# Error if no version is there.
 		if [ -z "${githubreleasefilename}" ]; then
 			fn_print_fail_nl "Cannot get version from GitHub API for ${githubreleaseuser}/${githubreleaserepo}"
-			fn_script_log_fatal "Cannot get version from GitHub API for ${githubreleaseuser}/${githubreleaserepo}"
+			fn_script_log_fail "Cannot get version from GitHub API for ${githubreleaseuser}/${githubreleaserepo}"
 		else
 			# Fetch file from the remote location from the existing module to the ${tmpdir} for now.
 			fn_fetch_file "${githubreleasedownloadlink}" "" "${githubreleasefilename}" "" "${githubreleasedownloadpath}" "${githubreleasefilename}"
