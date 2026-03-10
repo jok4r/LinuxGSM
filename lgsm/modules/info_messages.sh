@@ -1,23 +1,37 @@
 #!/bin/bash
 # LinuxGSM info_messages.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Defines server info messages for details and alerts.
 
 moduleselfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 
-# Separator is different for details.
-fn_messages_separator() {
-	if [ "${commandname}" == "DETAILS" ]; then
-		printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' =
+# Converts querytype to imgsoquerytype for use with ismygameserver.online urls
+if [ -n "${querytype}" ]; then
+	if [ "${querytype}" == "protocol-valve" ]; then
+		imgsoquerytype="valve"
+	elif [ "${querytype}" == "protocol-gamespy1" ]; then
+		imgsoquerytype="gamespy"
+	elif [ "${querytype}" == "protocol-gamespy2" ]; then
+		imgsoquerytype="gamespy"
+	elif [ "${querytype}" == "protocol-gamespy3" ]; then
+		imgsoquerytype="gamespy"
+	elif [ "${querytype}" == "protocol-quake1" ]; then
+		imgsoquerytype="quake"
+	elif [ "${querytype}" == "protocol-quake2" ]; then
+		imgsoquerytype="quake"
+	elif [ "${querytype}" == "protocol-quake3" ]; then
+		imgsoquerytype="quake"
+	elif [ "${querytype}" == "protocol-unreal2" ]; then
+		imgsoquerytype="unrealtournament2004"
 	else
-		echo -e "================================="
+		imgsoquerytype="${querytype}"
 	fi
-}
+fi
 
 # Removes the passwords form all but details.
-fn_info_message_password_strip() {
+fn_info_messages_password_strip() {
 	if [ "${commandname}" != "DETAILS" ]; then
 		if [ "${serverpassword}" ]; then
 			serverpassword="********"
@@ -39,8 +53,8 @@ fn_info_message_password_strip() {
 			httppassword="********"
 		fi
 
-		if [ "${telnetpass}" ]; then
-			telnetpass="********"
+		if [ "${telnetpassword}" ]; then
+			telnetpassword="********"
 		fi
 
 		if [ "${wsapikey}" ]; then
@@ -55,27 +69,36 @@ fn_info_message_password_strip() {
 
 # Alert Summary
 # used with alertlog
-fn_info_message_head() {
+fn_info_messages_head() {
 	echo -e ""
-	echo -e "${lightyellow}Alert Summary${default}"
+	echo -e "LinuxGSM Alert Summary"
 	fn_messages_separator
-	echo -e "Message"
-	echo -e "${alertbody}"
-	echo -e ""
-	echo -e "Game"
-	echo -e "${gamename}"
 	echo -e ""
 	echo -e "Server name"
 	echo -e "${servername}"
 	echo -e ""
+	echo -e "Information"
+	echo -e "${alertmessage}"
+	echo -e ""
+	echo -e "Game"
+	echo -e "${gamename}"
+	echo -e ""
+	echo -e "Server IP"
+	echo -e "${alertip}:${port}"
+	echo -e ""
 	echo -e "Hostname"
 	echo -e "${HOSTNAME}"
 	echo -e ""
-	echo -e "Server IP"
-	echo -e "${ip}:${port}"
+	if [ -n "${querytype}" ]; then
+		echo -e "Is my Game Server Online?"
+		echo -e "https://ismygameserver.online/${imgsoquerytype}/${alertip}:${queryport}"
+		echo -e ""
+	fi
+	echo -e "Server Time"
+	echo -e "$(date)"
 }
 
-fn_info_message_distro() {
+fn_info_messages_distro() {
 	#
 	# Distro Details
 	# =================================
@@ -84,12 +107,13 @@ fn_info_message_distro() {
 	# Arch:      x86_64
 	# Kernel:    5.4.0-65-generic
 	# Hostname:  server
+	# Environment: kvm
 	# Uptime:    16d, 5h, 18m
 	# tmux:      tmux 3.0a
 	# glibc:     2.31
 
 	echo -e ""
-	echo -e "${lightyellow}Distro Details${default}"
+	echo -e "${bold}${lightyellow}Distro Details${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Date:\t${default}$(date)"
@@ -97,8 +121,9 @@ fn_info_message_distro() {
 		echo -e "${lightblue}Arch:\t${default}${arch}"
 		echo -e "${lightblue}Kernel:\t${default}${kernel}"
 		echo -e "${lightblue}Hostname:\t${default}${HOSTNAME}"
+		echo -e "${lightblue}Environment:\t${default}${virtualenvironment}"
 		echo -e "${lightblue}Uptime:\t${default}${days}d, ${hours}h, ${minutes}m"
-		echo -e "${lightblue}tmux:\t${default}${tmuxv}"
+		echo -e "${lightblue}tmux:\t${default}${tmuxversion}"
 		echo -e "${lightblue}glibc:\t${default}${glibcversion}"
 		if [ -n "${javaram}" ]; then
 			echo -e "${lightblue}Java:\t${default}${javaversion}"
@@ -106,7 +131,7 @@ fn_info_message_distro() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_server_resource() {
+fn_info_messages_server_resource() {
 	#
 	# Server Resource
 	# =================================
@@ -132,10 +157,10 @@ fn_info_message_server_resource() {
 	# Internet IP:  176.58.124.96
 
 	echo -e ""
-	echo -e "${lightyellow}Server Resource${default}"
+	echo -e "${bold}${lightyellow}Server Resource${default}"
 	fn_messages_separator
 	{
-		echo -e "${lightyellow}CPU\t${default}"
+		echo -e "${bold}${lightyellow}CPU\t${default}"
 		echo -e "${lightblue}Model:\t${default}${cpumodel}"
 		echo -e "${lightblue}Cores:\t${default}${cpucores}"
 		echo -e "${lightblue}Frequency:\t${default}${cpufreqency}MHz"
@@ -143,22 +168,22 @@ fn_info_message_server_resource() {
 	} | column -s $'\t' -t
 	echo -e ""
 	{
-		echo -e "${lightyellow}Memory\t${default}"
+		echo -e "${bold}${lightyellow}Memory\t${default}"
 		echo -e "${lightblue}Mem:\t${lightblue}total\tused\tfree\tcached\tavailable${default}"
 		echo -e "${lightblue}Physical:\t${default}${physmemtotal}\t${physmemused}\t${physmemfree}\t${physmemcached}\t${physmemavailable}${default}"
 		echo -e "${lightblue}Swap:\t${default}${swaptotal}\t${swapused}\t${swapfree}${default}"
 	} | column -s $'\t' -t
 	echo -e ""
 	{
-		echo -e "${lightyellow}Storage${default}"
+		echo -e "${bold}${lightyellow}Storage${default}"
 		echo -e "${lightblue}Filesystem:\t${default}${filesystem}"
-		echo -e "${lightblue}Total:\t\t${default}${totalspace}"
-		echo -e "${lightblue}Used:\t\t${default}${usedspace}"
+		echo -e "${lightblue}Total:\t${default}${totalspace}"
+		echo -e "${lightblue}Used:\t${default}${usedspace}"
 		echo -e "${lightblue}Available:\t${default}${availspace}"
 	} | column -s $'\t' -t
 	echo -e ""
 	{
-		echo -e "${lightyellow}Network${default}"
+		echo -e "${bold}${lightyellow}Network${default}"
 		if [ -n "${netint}" ]; then
 			echo -e "${lightblue}Interface:\t${default}${netint}"
 		fi
@@ -172,7 +197,7 @@ fn_info_message_server_resource() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_gameserver_resource() {
+fn_info_messages_gameserver_resource() {
 	#
 	# Game Server Resource Usage
 	# =================================
@@ -185,7 +210,7 @@ fn_info_message_gameserver_resource() {
 	# Backups:      24K
 
 	echo -e ""
-	echo -e "${lightyellow}Game Server Resource Usage${default}"
+	echo -e "${bold}${lightgreen}${gamename} Resource Usage${default}"
 	fn_messages_separator
 	{
 		if [ "${status}" != "0" ] && [ -v status ]; then
@@ -194,10 +219,10 @@ fn_info_message_gameserver_resource() {
 			else
 				echo -e "${lightblue}CPU Used:\t${red}unknown${default}"
 			fi
-			if [ -n "${memused}" ]; then
-				echo -e "${lightblue}Mem Used:\t${default}${pmemused}%\t${memused}MB${default}"
+			if [ -n "${memusedmb}" ]; then
+				echo -e "${lightblue}Mem Used:\t${default}${memusedpct}%\t${memusedmb}MB${default}"
 			else
-				echo -e "${lightblue}Mem Used:\t${default}${pmemused}\t${red}unknown${default}"
+				echo -e "${lightblue}Mem Used:\t${default}${memusedpct}\t${red}unknown${default}"
 			fi
 		else
 			echo -e "${lightblue}CPU Used:\t${default}0%${default}"
@@ -206,7 +231,7 @@ fn_info_message_gameserver_resource() {
 	} | column -s $'\t' -t
 	echo -e ""
 	{
-		echo -e "${lightyellow}Storage${default}"
+		echo -e "${bold}${lightyellow}Storage${default}"
 		echo -e "${lightblue}Total:\t${default}${rootdirdu}"
 		echo -e "${lightblue}Serverfiles:\t${default}${serverfilesdu}"
 		if [ -d "${backupdir}" ]; then
@@ -215,7 +240,7 @@ fn_info_message_gameserver_resource() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_gameserver() {
+fn_info_messages_gameserver() {
 	#
 	# Counter-Strike: Global Offensive Server Details
 	# =================================
@@ -234,8 +259,8 @@ fn_info_message_gameserver() {
 	# Status:           STARTED
 
 	echo -e ""
-	echo -e "${lightgreen}${gamename} Server Details${default}"
-	fn_info_message_password_strip
+	echo -e "${bold}${lightgreen}${gamename} Server Details${default}"
+	fn_info_messages_password_strip
 	fn_messages_separator
 	{
 		# Server name
@@ -295,7 +320,7 @@ fn_info_message_gameserver() {
 			echo -e "${lightblue}Server password:\t${default}${serverpassword}"
 		fi
 
-		# Query enabled (Starbound)
+		# Query enabled (Starbound, Minecraft)
 		if [ -n "${queryenabled}" ]; then
 			echo -e "${lightblue}Query enabled:\t${default}${queryenabled}"
 		fi
@@ -486,6 +511,11 @@ fn_info_message_gameserver() {
 			echo -e "${lightblue}Version Count:\t${default}${versioncount}"
 		fi
 
+		# backupinterval (Soulmask)
+		if [ -n "${backupinterval}" ]; then
+			echo -e "${lightblue}Backup Interval:\t${default}${backupinterval}"
+		fi
+
 		# Listed on Master server
 		if [ -n "${displaymasterserver}" ]; then
 			if [ "${displaymasterserver}" == "true" ]; then
@@ -501,11 +531,16 @@ fn_info_message_gameserver() {
 		else
 			echo -e "${lightblue}Status:\t${green}STARTED${default}"
 		fi
+
+		# ismygameserver.online
+		if [ -n "${querytype}" ]; then
+			echo -e "${lightblue}Query Check:\t${default}https://ismygameserver.online/${imgsoquerytype}/${alertip}:${queryport}"
+		fi
 	} | column -s $'\t' -t
 	echo -e ""
 }
 
-fn_info_message_script() {
+fn_info_messages_script() {
 	# csgoserver Script Details
 	# =================================
 	# Script name:            csgoserver
@@ -515,7 +550,6 @@ fn_info_message_script() {
 	# Email alert:            off
 	# Gotify alert:           off
 	# IFTTT alert:            off
-	# Mailgun (email) alert:  off
 	# Pushbullet alert:       off
 	# Pushover alert:         off
 	# Rocketchat alert:       off
@@ -526,7 +560,7 @@ fn_info_message_script() {
 	# Location:               /home/lgsm/csgoserver
 	# Config file:            /home/lgsm/csgoserver/serverfiles/csgo/cfg/csgoserver.cfg
 
-	echo -e "${lightgreen}${selfname} Script Details${default}"
+	echo -e "${bold}${lightgreen}${selfname} Script Details${default}"
 	fn_messages_separator
 	{
 		# Script name
@@ -552,25 +586,39 @@ fn_info_message_script() {
 		fi
 
 		# Discord alert
-		echo -e "${lightblue}Discord alert:\t${default}${discordalert}"
+		if [ "${discordalert}" == "on" ]; then
+			echo -e "${lightblue}Discord alert:\t${default}${discordalert}"
+		fi
 		# Email alert
-		echo -e "${lightblue}Email alert:\t${default}${emailalert}"
+		if [ "${emailalert}" == "on" ]; then
+			echo -e "${lightblue}Email alert:\t${default}${emailalert}"
+		fi
 		# Gotify alert
-		echo -e "${lightblue}Gotify alert:\t${default}${gotifyalert}"
+		if [ "${gotifyalert}" == "on" ]; then
+			echo -e "${lightblue}Gotify alert:\t${default}${gotifyalert}"
+		fi
 		# IFTTT alert
 		echo -e "${lightblue}IFTTT alert:\t${default}${iftttalert}"
-		# Mailgun alert
-		echo -e "${lightblue}Mailgun (email) alert:\t${default}${mailgunalert}"
 		# Pushbullet alert
-		echo -e "${lightblue}Pushbullet alert:\t${default}${pushbulletalert}"
+		if [ "${pushbulletalert}" == "on" ]; then
+			echo -e "${lightblue}Pushbullet alert:\t${default}${pushbulletalert}"
+		fi
 		# Pushover alert
-		echo -e "${lightblue}Pushover alert:\t${default}${pushoveralert}"
+		if [ "${pushoveralert}" == "on" ]; then
+			echo -e "${lightblue}Pushover alert:\t${default}${pushoveralert}"
+		fi
 		# Rocketchat alert
-		echo -e "${lightblue}Rocketchat alert:\t${default}${rocketchatalert}"
+		if [ "${rocketchatalert}" == "on" ]; then
+			echo -e "${lightblue}Rocketchat alert:\t${default}${rocketchatalert}"
+		fi
 		# Slack alert
-		echo -e "${lightblue}Slack alert:\t${default}${slackalert}"
+		if [ "${slackalert}" == "on" ]; then
+			echo -e "${lightblue}Slack alert:\t${default}${slackalert}"
+		fi
 		# Telegram alert
-		echo -e "${lightblue}Telegram alert:\t${default}${telegramalert}"
+		if [ "${telegramalert}" == "on" ]; then
+			echo -e "${lightblue}Telegram alert:\t${default}${telegramalert}"
+		fi
 
 		# Update on start
 		if [ -n "${updateonstart}" ]; then
@@ -607,7 +655,7 @@ fn_info_message_script() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_backup() {
+fn_info_messages_backup() {
 	#
 	# Backups
 	# =================================
@@ -618,7 +666,7 @@ fn_info_message_backup() {
 	#     size:          945M
 
 	echo -e ""
-	echo -e "${lightgreen}Backups${default}"
+	echo -e "${bold}${lightgreen}Backups${default}"
 	fn_messages_separator
 	if [ ! -d "${backupdir}" ] || [ "${backupcount}" == "0" ]; then
 		echo -e "No Backups created"
@@ -639,15 +687,15 @@ fn_info_message_backup() {
 	fi
 }
 
-fn_info_message_commandlineparms() {
+fn_info_messages_commandlineparms() {
 	#
 	# Command-line Parameters
 	# =================================
 	# ./run_server_x86.sh +set net_strict 1
 
 	echo -e ""
-	echo -e "${lightgreen}Command-line Parameters${default}"
-	fn_info_message_password_strip
+	echo -e "${bold}${lightgreen}Command-line Parameters${default}"
+	fn_info_messages_password_strip
 	fn_messages_separator
 	if [ "${serverpassword}" == "NOT SET" ]; then
 		unset serverpassword
@@ -656,20 +704,20 @@ fn_info_message_commandlineparms() {
 	echo -e "${preexecutable} ${executable} ${startparameters}"
 }
 
-fn_info_message_ports_edit() {
+fn_info_messages_ports_edit() {
 	#
 	# Ports
 	# =================================
 	# Change ports by editing the parameters in:
 	# /home/lgsm/qlserver/serverfiles/baseq3/ql-server.cfg
 	echo -e ""
-	echo -e "${lightgreen}Ports${default}"
+	echo -e "${bold}${lightgreen}Ports${default}"
 	fn_messages_separator
 	echo -e "${lightblue}Change ports by editing the parameters in:${default}"
 
 	startparameterslocation="${red}UNKNOWN${default}"
 	# engines/games that require editing in the config file.
-	local ports_edit_array=("ac" "arma3" "armar" "bo" "bt" "cd" "ct" "dst" "eco" "idtech2" "idtech3" "idtech3_ql" "jc2" "jc3" "lwjgl2" "mcb" "nec" "pc" "pc2" "prism3d" "pz" "qw" "refractor" "renderware" "rw" "sb" "sdtd" "st" "stn" "ts3" "tw" "terraria" "unreal" "unreal2" "unreal3" "vints" "wurm")
+	local ports_edit_array=("ac" "arma3" "armar" "bo" "bt" "ct" "dst" "eco" "idtech2" "idtech3" "idtech3_ql" "jc2" "jc3" "lwjgl2" "mcb" "nec" "pc" "pc2" "prism3d" "pz" "qw" "refractor" "renderware" "rw" "sb" "sdtd" "st" "stn" "ts3" "tw" "terraria" "unreal" "unreal2" "unreal3" "vints" "xnt" "wurm")
 	for port_edit in "${ports_edit_array[@]}"; do
 		if [ "${shortname}" == "ut3" ]; then
 			startparameterslocation="${servercfgdir}/UTWeb.ini"
@@ -680,7 +728,7 @@ fn_info_message_ports_edit() {
 		fi
 	done
 	# engines/games that require editing the start parameters.
-	local ports_edit_array=("av" "ck" "col" "fctr" "goldsrc" "hcu" "hw" "iw3.0" "ioquake3" "qfusion" "rust" "scpsl" "scpslsm" "sol" "spark" "source" "unreal4" "arma3" "dayz" "unt" "vh")
+	local ports_edit_array=("av" "ck" "col" "cs2" "fctr" "goldsrc" "hcu" "hw" "iw3.0" "ioquake3" "pw" "qfusion" "rust" "scpsl" "scpslsm" "sf" "sol" "spark" "source" "unreal4" "arma3" "dayz" "unt" "vh")
 	for port_edit in "${ports_edit_array[@]}"; do
 		if [ "${engine}" == "${port_edit}" ] || [ "${gamename}" == "${port_edit}" ] || [ "${shortname}" == "${port_edit}" ]; then
 			startparameterslocation="${configdirserver}"
@@ -690,7 +738,7 @@ fn_info_message_ports_edit() {
 	echo -e ""
 }
 
-fn_info_message_ports() {
+fn_info_messages_ports() {
 	echo -e "${lightblue}Useful port diagnostic command:${default}"
 	if [ "${shortname}" == "armar" ]; then
 		portcommand="ss -tuplwn | grep enfMain"
@@ -698,10 +746,18 @@ fn_info_message_ports() {
 		portcommand="ss -tuplwn | grep AvorionServer"
 	elif [ "${shortname}" == "bf1942" ]; then
 		portcommand="ss -tuplwn | grep bf1942_lnxded"
+	elif [ "${shortname}" == "bfv" ]; then
+		portcommand="ss -tuplwn | grep bfv_linded"
+	elif [ "${shortname}" == "dayz" ]; then
+		portcommand="ss -tuplwn | grep enfMain"
+	elif [ "${shortname}" == "q4" ]; then
+		portcommand="ss -tuplwn | grep q4ded.x86"
 	elif [ "${shortname}" == "mc" ] || [ "${shortname}" == "nec" ] || [ "${shortname}" == "pmc" ] || [ "${shortname}" == "vpmc" ] || [ "${shortname}" == "wmc" ]; then
 		portcommand="ss -tuplwn | grep java"
 	elif [ "${shortname}" == "terraria" ]; then
 		portcommand="ss -tuplwn | grep Main"
+	elif [ "${shortname}" == "sm" ]; then
+		portcommand="ss -tuplwn | grep WSServer-Linux"
 	elif [ "${engine}" == "source" ]; then
 		portcommand="ss -tuplwn | grep srcds_linux"
 	elif [ "${engine}" == "goldsrc" ]; then
@@ -714,7 +770,7 @@ fn_info_message_ports() {
 	echo -e ""
 }
 
-fn_info_message_statusbottom() {
+fn_info_messages_statusbottom() {
 	echo -e ""
 	if [ "${status}" == "0" ]; then
 		echo -e "${lightblue}Status:\t${red}STOPPED${default}"
@@ -726,8 +782,8 @@ fn_info_message_statusbottom() {
 
 fn_info_logs() {
 	echo -e ""
-	echo -e "${selfname} Logs"
-	echo -e "================================="
+	echo -e "${bold}${selfname} Logs"
+	fn_messages_separator
 
 	if [ -n "${lgsmlog}" ]; then
 		echo -e "\nScript log\n==================="
@@ -789,7 +845,7 @@ fn_port() {
 	fi
 }
 
-fn_info_message_ac() {
+fn_info_messages_ac() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -799,7 +855,7 @@ fn_info_message_ac() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ark() {
+fn_info_messages_ark() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -809,7 +865,7 @@ fn_info_message_ark() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_arma3() {
+fn_info_messages_arma3() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -821,16 +877,16 @@ fn_info_message_arma3() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_armar() {
+fn_info_messages_armar() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
-		fn_port "Steam Query" queryport udp
+		fn_port "Query" queryport udp
 		fn_port "BattleEye" battleeyeport tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_av() {
+fn_info_messages_av() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -841,7 +897,7 @@ fn_info_message_av() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_bf1942() {
+fn_info_messages_bf1942() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -849,7 +905,7 @@ fn_info_message_bf1942() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_bfv() {
+fn_info_messages_bfv() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -857,7 +913,7 @@ fn_info_message_bfv() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_bo() {
+fn_info_messages_bo() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -865,7 +921,7 @@ fn_info_message_bo() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_bt() {
+fn_info_messages_bt() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -873,7 +929,7 @@ fn_info_message_bt() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_btl() {
+fn_info_messages_btl() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -899,8 +955,8 @@ fn_info_messages_ck() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_cmw() {
-	fn_info_message_password_strip
+fn_info_messages_cmw() {
+	fn_info_messages_password_strip
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -909,7 +965,7 @@ fn_info_message_cmw() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_cod() {
+fn_info_messages_cod() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -917,7 +973,7 @@ fn_info_message_cod() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_coduo() {
+fn_info_messages_coduo() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -925,7 +981,7 @@ fn_info_message_coduo() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_cod2() {
+fn_info_messages_cod2() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -933,7 +989,7 @@ fn_info_message_cod2() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_cod4() {
+fn_info_messages_cod4() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -941,7 +997,7 @@ fn_info_message_cod4() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_codwaw() {
+fn_info_messages_codwaw() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -949,7 +1005,7 @@ fn_info_message_codwaw() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_col() {
+fn_info_messages_col() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -958,7 +1014,15 @@ fn_info_message_col() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_csgo() {
+fn_info_messages_cs2() {
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Query" queryport tcp
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_csgo() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -969,15 +1033,15 @@ fn_info_message_csgo() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ct() {
-	fn_info_message_password_strip
+fn_info_messages_ct() {
+	fn_info_messages_password_strip
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_dayz() {
+fn_info_messages_dayz() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -987,7 +1051,7 @@ fn_info_message_dayz() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_dodr() {
+fn_info_messages_dodr() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -995,7 +1059,7 @@ fn_info_message_dodr() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_dst() {
+fn_info_messages_dst() {
 	{
 		fn_port "header"
 		fn_port "Game: Server" port udp
@@ -1005,15 +1069,17 @@ fn_info_message_dst() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_eco() {
+fn_info_messages_eco() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
+		fn_port "Query" queryport udp
 		fn_port "Web Interface" httpport tcp
+		fn_port "RCON" rconport tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_etl() {
+fn_info_messages_etl() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1021,7 +1087,7 @@ fn_info_message_etl() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_fctr() {
+fn_info_messages_fctr() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1029,7 +1095,7 @@ fn_info_message_fctr() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_goldsrc() {
+fn_info_messages_goldsrc() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1038,7 +1104,7 @@ fn_info_message_goldsrc() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_hcu() {
+fn_info_messages_hcu() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1046,7 +1112,7 @@ fn_info_message_hcu() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_hw() {
+fn_info_messages_hw() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1054,7 +1120,16 @@ fn_info_message_hw() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ins() {
+fn_info_messages_hz() {
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Query" queryport udp
+		fn_port "RCON" rconport tcp
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_ins() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1065,7 +1140,7 @@ fn_info_message_ins() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_inss() {
+fn_info_messages_inss() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1074,7 +1149,7 @@ fn_info_message_inss() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_jc2() {
+fn_info_messages_jc2() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1082,7 +1157,7 @@ fn_info_message_jc2() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_jc3() {
+fn_info_messages_jc3() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1092,26 +1167,26 @@ fn_info_message_jc3() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_jk2() {
+fn_info_messages_jk2() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_kf() {
+fn_info_messages_kf() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
-		fn_port "Query" queryport udp
-		fn_port "Query (GameSpy)" queryportgs udp
+		fn_port "Query - Steam" queryport udp
+		fn_port "Query - Unreal 2" unreal2queryport udp
+		fn_port "Query - Gamespy" gamespyqueryport udp
 		fn_port "Web Interface" httpport tcp
 		fn_port "LAN" lanport udp
-		fn_port "Steamworks P2P" steamworksport udp
 		fn_port "Steam" steamport udp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${servername} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${servername} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1121,8 +1196,8 @@ fn_info_message_kf() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_kf2() {
-	fn_info_message_password_strip
+fn_info_messages_kf2() {
+	fn_info_messages_password_strip
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1130,7 +1205,7 @@ fn_info_message_kf2() {
 		fn_port "Web Interface" httpport tcp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${servername} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${servername} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1140,15 +1215,7 @@ fn_info_message_kf2() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_lo() {
-	{
-		fn_port "header"
-		fn_port "Game" port udp
-		fn_port "Query" queryport udp
-	} | column -s $'\t' -t
-}
-
-fn_info_message_mc() {
+fn_info_messages_mc() {
 	{
 		fn_port "header"
 		fn_port "Game" port tcp
@@ -1157,7 +1224,7 @@ fn_info_message_mc() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_mcb() {
+fn_info_messages_mcb() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1165,7 +1232,7 @@ fn_info_message_mcb() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_mh() {
+fn_info_messages_mh() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1174,22 +1241,14 @@ fn_info_message_mh() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_mohaa() {
+fn_info_messages_mohaa() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_mom() {
-	{
-		fn_port "header"
-		fn_port "Game" port udp
-		fn_port "Beacon" beaconport udp
-	} | column -s $'\t' -t
-}
-
-fn_info_message_mta() {
+fn_info_messages_mta() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1200,14 +1259,14 @@ fn_info_message_mta() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_nec() {
+fn_info_messages_nec() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ohd() {
+fn_info_messages_ohd() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1216,7 +1275,7 @@ fn_info_message_ohd() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_onset() {
+fn_info_messages_onset() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1225,7 +1284,7 @@ fn_info_message_onset() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_pc() {
+fn_info_messages_pc() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1235,7 +1294,7 @@ fn_info_message_pc() {
 		fn_port "API" apiport tcp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${gamename} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${gamename} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1243,7 +1302,7 @@ fn_info_message_pc() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_pc2() {
+fn_info_messages_pc2() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1252,7 +1311,7 @@ fn_info_message_pc2() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ps() {
+fn_info_messages_ps() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1261,7 +1320,7 @@ fn_info_message_ps() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_pvr() {
+fn_info_messages_pvr() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1271,7 +1330,16 @@ fn_info_message_pvr() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_pz() {
+fn_info_messages_pw() {
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Steam" steamport udp
+		fn_port "Unknown" unknownport tcp
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_pz() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1279,28 +1347,38 @@ fn_info_message_pz() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_qw() {
+fn_info_messages_qw() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_q2() {
+fn_info_messages_q2() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
+		fn_port "Query" queryport udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_q3() {
+fn_info_messages_q3() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
+		fn_port "Query" queryport udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ql() {
+fn_info_messages_q4() {
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Query" queryport udp
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_ql() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1310,18 +1388,19 @@ fn_info_message_ql() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ro() {
+fn_info_messages_ro() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
-		fn_port "Query" queryport udp
+		fn_port "Query - Steam" queryport udp
+		fn_port "Query - Unreal 2" unreal2queryport udp
 		fn_port "Web Interface" httpport tcp
 		fn_port "LAN" lanport udp
-		fn_port "Steamworks P2P" steamworksport udp
 		fn_port "Steam" steamport udp
+
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${servername} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${servername} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1331,14 +1410,14 @@ fn_info_message_ro() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_rtcw() {
+fn_info_messages_rtcw() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_rust() {
+fn_info_messages_rust() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1348,7 +1427,7 @@ fn_info_message_rust() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_rw() {
+fn_info_messages_rw() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1357,7 +1436,7 @@ fn_info_message_rw() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_samp() {
+fn_info_messages_samp() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1365,7 +1444,7 @@ fn_info_message_samp() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_sb() {
+fn_info_messages_sb() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1374,7 +1453,7 @@ fn_info_message_sb() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_sbots() {
+fn_info_messages_sbots() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1382,15 +1461,15 @@ fn_info_message_sbots() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_scpsl() {
+fn_info_messages_scpsl() {
 	{
 		fn_port "header"
 		fn_port "Game" port tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_sdtd() {
-	fn_info_message_password_strip
+fn_info_messages_sdtd() {
+	fn_info_messages_password_strip
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1400,7 +1479,7 @@ fn_info_message_sdtd() {
 		fn_port "Telnet" telnetport tcp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${gamename} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${gamename} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1408,25 +1487,44 @@ fn_info_message_sdtd() {
 		echo -e "${lightblue}Web Interface password:\t${default}${httppassword}"
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${gamename} Telnet${default}"
+	echo -e "${bold}${lightgreen}${gamename} Telnet${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Telnet enabled:\t${default}${telnetenabled}"
 		echo -e "${lightblue}Telnet address:\t${default}${telnetip} ${telnetport}"
-		echo -e "${lightblue}Telnet password:\t${default}${telnetpass}"
+		echo -e "${lightblue}Telnet password:\t${default}${telnetpassword}"
 	} | column -s $'\t' -t
 }
 
-fn_info_message_sf() {
+fn_info_messages_sf() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 		fn_port "Query" queryport udp
 		fn_port "Beacon" beaconport udp
+		fn_port "ReliableMessaging" reliableport tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_sof2() {
+fn_info_messages_sm() {
+	fn_info_messages_password_strip
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Game" port tcp
+		fn_port "Query" queryport udp
+		fn_port "Telnet" telnetport tcp
+	} | column -s $'\t' -t
+	echo -e ""
+	echo -e "${bold}${lightgreen}${gamename} Telnet${default}"
+	fn_messages_separator
+	{
+		echo -e "${lightblue}Telnet enabled:\t${default}${telnetenabled}"
+		echo -e "${lightblue}Telnet address:\t${default}${telnetip} ${telnetport}"
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_sof2() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1434,7 +1532,7 @@ fn_info_message_sof2() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_sol() {
+fn_info_messages_sol() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1443,7 +1541,7 @@ fn_info_message_sol() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_prism3d() {
+fn_info_messages_prism3d() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1451,14 +1549,14 @@ fn_info_message_prism3d() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_source() {
+fn_info_messages_source() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 		fn_port "Query" queryport tcp
 		fn_port "RCON" rconport tcp
 		fn_port "SourceTV" sourcetvport udp
-		# Will not show if unaviable
+		# Will not show if unavailable
 		if [ "${steamport}" == "0" ] || [ -v "${steamport}" ]; then
 			fn_port "Steam" steamport udp
 		fi
@@ -1466,16 +1564,17 @@ fn_info_message_source() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_spark() {
-	fn_info_message_password_strip
+fn_info_messages_spark() {
+	fn_info_messages_password_strip
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 		fn_port "Query" queryport udp
+		fn_port "Mod Server" modserverport tcp
 		fn_port "Web Interface" httpport tcp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${gamename} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${gamename} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface url:\t${default}http://${httpip}:${httpport}/index.html"
@@ -1484,7 +1583,7 @@ fn_info_message_spark() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_squad() {
+fn_info_messages_squad() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1493,7 +1592,7 @@ fn_info_message_squad() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_st() {
+fn_info_messages_st() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1501,7 +1600,15 @@ fn_info_message_st() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ti() {
+fn_info_messages_stn() {
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Query" queryport udp
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_ti() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1510,20 +1617,20 @@ fn_info_message_ti() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ts3() {
+fn_info_messages_ts3() {
 	{
 		fn_port "header"
 		fn_port "Voice" port udp
 		fn_port "Query" queryport tcp
-		fn_port "Query (SSH)" querysshport tcp
-		fn_port "Query (http)" queryhttpport tcp
-		fn_port "Query (https)" queryhttpsport tcp
+		fn_port "Query (SSH)" sshqueryport tcp
+		fn_port "Query (http)" httpqueryport tcp
+		fn_port "Query (https)" httpsqueryport tcp
 		fn_port "File Transfer" fileport tcp
 		fn_port "Telnet" telnetport tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_tw() {
+fn_info_messages_tw() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1531,7 +1638,7 @@ fn_info_message_tw() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_terraria() {
+fn_info_messages_terraria() {
 	{
 		fn_port "header"
 		fn_port "Game" port tcp
@@ -1539,7 +1646,7 @@ fn_info_message_terraria() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_tu() {
+fn_info_messages_tu() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1548,17 +1655,27 @@ fn_info_message_tu() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ut2k4() {
+fn_info_messages_tf() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
 		fn_port "Query" queryport udp
-		fn_port "Query (GameSpy)" queryportgs udp
+		fn_port "Beacon" beaconport udp
+		fn_port "Shutdown" shutdownport tcp
+	} | column -s $'\t' -t
+}
+
+fn_info_messages_ut2k4() {
+	{
+		fn_port "header"
+		fn_port "Game" port udp
+		fn_port "Query - Unreal 2" queryport udp
+		fn_port "Query - Gamespy" gamespyqueryport udp
 		fn_port "Web Interface" httpport tcp
 		fn_port "LAN" lanport udp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${servername} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${gamename} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1568,7 +1685,7 @@ fn_info_message_ut2k4() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_unreal() {
+fn_info_messages_unreal() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1577,7 +1694,7 @@ fn_info_message_unreal() {
 		fn_port "Web Interface" httpport tcp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${servername} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${gamename} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1587,7 +1704,7 @@ fn_info_message_unreal() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_unt() {
+fn_info_messages_unt() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1596,7 +1713,7 @@ fn_info_message_unt() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ut() {
+fn_info_messages_ut() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1604,8 +1721,8 @@ fn_info_message_ut() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_ut3() {
-	fn_info_message_password_strip
+fn_info_messages_ut3() {
+	fn_info_messages_password_strip
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1613,7 +1730,7 @@ fn_info_message_ut3() {
 		fn_port "Web Interface" httpport tcp
 	} | column -s $'\t' -t
 	echo -e ""
-	echo -e "${lightgreen}${servername} Web Interface${default}"
+	echo -e "${bold}${lightgreen}${gamename} Web Interface${default}"
 	fn_messages_separator
 	{
 		echo -e "${lightblue}Web Interface enabled:\t${default}${httpenabled}"
@@ -1623,7 +1740,7 @@ fn_info_message_ut3() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_vh() {
+fn_info_messages_vh() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1631,21 +1748,21 @@ fn_info_message_vh() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_vints() {
+fn_info_messages_vints() {
 	{
 		fn_port "header"
 		fn_port "Game" port tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_vpmc() {
+fn_info_messages_vpmc() {
 	{
 		fn_port "header"
 		fn_port "Game" port tcp
 	} | column -s $'\t' -t
 }
 
-fn_info_message_wet() {
+fn_info_messages_wet() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1653,7 +1770,7 @@ fn_info_message_wet() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_wf() {
+fn_info_messages_wf() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1661,7 +1778,7 @@ fn_info_message_wf() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_wurm() {
+fn_info_messages_wurm() {
 	{
 		fn_port "header"
 		fn_port "Game" port tcp
@@ -1671,7 +1788,7 @@ fn_info_message_wurm() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_stn() {
+fn_info_messages_xnt() {
 	{
 		fn_port "header"
 		fn_port "Game" port udp
@@ -1679,188 +1796,196 @@ fn_info_message_stn() {
 	} | column -s $'\t' -t
 }
 
-fn_info_message_select_engine() {
+fn_info_messages_select_engine() {
 	# Display details depending on game or engine.
 	if [ "${shortname}" == "ac" ]; then
-		fn_info_message_ac
+		fn_info_messages_ac
 	elif [ "${shortname}" == "ark" ]; then
-		fn_info_message_ark
+		fn_info_messages_ark
 	elif [ "${shortname}" == "arma3" ]; then
-		fn_info_message_arma3
+		fn_info_messages_arma3
 	elif [ "${shortname}" == "armar" ]; then
-		fn_info_message_armar
+		fn_info_messages_armar
 	elif [ "${shortname}" == "av" ]; then
-		fn_info_message_av
+		fn_info_messages_av
 	elif [ "${shortname}" == "bf1942" ]; then
-		fn_info_message_bf1942
+		fn_info_messages_bf1942
 	elif [ "${shortname}" == "bfv" ]; then
-		fn_info_message_bfv
+		fn_info_messages_bfv
 	elif [ "${shortname}" == "bo" ]; then
-		fn_info_message_bo
+		fn_info_messages_bo
 	elif [ "${shortname}" == "bt" ]; then
-		fn_info_message_bt
+		fn_info_messages_bt
 	elif [ "${shortname}" == "btl" ]; then
-		fn_info_message_btl
-	elif [ "${shortname}" == "cd" ]; then
-		fn_info_messages_cd
+		fn_info_messages_btl
 	elif [ "${shortname}" == "ck" ]; then
 		fn_info_messages_ck
+	elif [ "${shortname}" == "cs2" ]; then
+		fn_info_messages_cs2
 	elif [ "${shortname}" == "csgo" ]; then
-		fn_info_message_csgo
+		fn_info_messages_csgo
 	elif [ "${shortname}" == "cmw" ]; then
-		fn_info_message_cmw
+		fn_info_messages_cmw
 	elif [ "${shortname}" == "cod" ]; then
-		fn_info_message_cod
+		fn_info_messages_cod
 	elif [ "${shortname}" == "coduo" ]; then
-		fn_info_message_coduo
+		fn_info_messages_coduo
 	elif [ "${shortname}" == "cod2" ]; then
-		fn_info_message_cod2
+		fn_info_messages_cod2
 	elif [ "${shortname}" == "cod4" ]; then
-		fn_info_message_cod4
+		fn_info_messages_cod4
 	elif [ "${shortname}" == "codwaw" ]; then
-		fn_info_message_codwaw
+		fn_info_messages_codwaw
 	elif [ "${shortname}" == "col" ]; then
-		fn_info_message_col
+		fn_info_messages_col
 	elif [ "${shortname}" == "ct" ]; then
-		fn_info_message_ct
+		fn_info_messages_ct
 	elif [ "${shortname}" == "dayz" ]; then
-		fn_info_message_dayz
+		fn_info_messages_dayz
 	elif [ "${shortname}" == "dodr" ]; then
-		fn_info_message_dodr
+		fn_info_messages_dodr
 	elif [ "${shortname}" == "dst" ]; then
-		fn_info_message_dst
+		fn_info_messages_dst
 	elif [ "${shortname}" == "eco" ]; then
-		fn_info_message_eco
+		fn_info_messages_eco
 	elif [ "${shortname}" == "etl" ]; then
-		fn_info_message_etl
+		fn_info_messages_etl
 	elif [ "${shortname}" == "fctr" ]; then
-		fn_info_message_fctr
+		fn_info_messages_fctr
 	elif [ "${shortname}" == "hcu" ]; then
-		fn_info_message_hcu
+		fn_info_messages_hcu
 	elif [ "${shortname}" == "hw" ]; then
-		fn_info_message_hw
+		fn_info_messages_hw
+	elif [ "${shortname}" == "hz" ]; then
+		fn_info_messages_hz
 	elif [ "${shortname}" == "ins" ]; then
-		fn_info_message_ins
+		fn_info_messages_ins
 	elif [ "${shortname}" == "inss" ]; then
-		fn_info_message_inss
+		fn_info_messages_inss
 	elif [ "${shortname}" == "jc2" ]; then
-		fn_info_message_jc2
+		fn_info_messages_jc2
 	elif [ "${shortname}" == "jc3" ]; then
-		fn_info_message_jc3
+		fn_info_messages_jc3
 	elif [ "${shortname}" == "jk2" ]; then
-		fn_info_message_jk2
+		fn_info_messages_jk2
 	elif [ "${shortname}" == "kf" ]; then
-		fn_info_message_kf
+		fn_info_messages_kf
 	elif [ "${shortname}" == "kf2" ]; then
-		fn_info_message_kf2
-	elif [ "${shortname}" == "lo" ]; then
-		fn_info_message_lo
+		fn_info_messages_kf2
 	elif [ "${shortname}" == "mc" ] || [ "${shortname}" == "pmc" ] || [ "${shortname}" == "wmc" ]; then
-		fn_info_message_mc
+		fn_info_messages_mc
 	elif [ "${shortname}" == "mcb" ]; then
-		fn_info_message_mcb
+		fn_info_messages_mcb
 	elif [ "${shortname}" == "mh" ]; then
-		fn_info_message_mh
+		fn_info_messages_mh
 	elif [ "${shortname}" == "mohaa" ]; then
-		fn_info_message_mohaa
-	elif [ "${shortname}" == "mom" ]; then
-		fn_info_message_mom
+		fn_info_messages_mohaa
 	elif [ "${shortname}" == "mta" ]; then
-		fn_info_message_mta
+		fn_info_messages_mta
 	elif [ "${shortname}" == "nec" ]; then
-		fn_info_message_nec
+		fn_info_messages_nec
 	elif [ "${shortname}" == "ohd" ]; then
-		fn_info_message_ohd
+		fn_info_messages_ohd
 	elif [ "${shortname}" == "onset" ]; then
-		fn_info_message_onset
+		fn_info_messages_onset
 	elif [ "${shortname}" == "pc" ]; then
-		fn_info_message_pc
+		fn_info_messages_pc
 	elif [ "${shortname}" == "pc2" ]; then
-		fn_info_message_pc2
-	elif [ "${shortname}" == "ps" ]; then
-		fn_info_message_ps
+		fn_info_messages_pc2
+	elif [ "${shortname}" == "squad44" ]; then
+		fn_info_messages_ps
 	elif [ "${shortname}" == "pvr" ]; then
-		fn_info_message_pvr
+		fn_info_messages_pvr
+	elif [ "${shortname}" == "pw" ]; then
+		fn_info_messages_pw
 	elif [ "${shortname}" == "pz" ]; then
-		fn_info_message_pz
+		fn_info_messages_pz
 	elif [ "${shortname}" == "q2" ]; then
-		fn_info_message_q2
+		fn_info_messages_q2
 	elif [ "${shortname}" == "q3" ]; then
-		fn_info_message_q3
+		fn_info_messages_q3
+	elif [ "${shortname}" == "q4" ]; then
+		fn_info_messages_q3
 	elif [ "${shortname}" == "ql" ]; then
-		fn_info_message_ql
+		fn_info_messages_ql
 	elif [ "${shortname}" == "qw" ]; then
-		fn_info_message_qw
+		fn_info_messages_qw
 	elif [ "${shortname}" == "ro" ]; then
-		fn_info_message_ro
+		fn_info_messages_ro
 	elif [ "${shortname}" == "rtcw" ]; then
-		fn_info_message_rtcw
+		fn_info_messages_rtcw
 	elif [ "${shortname}" == "samp" ]; then
-		fn_info_message_samp
+		fn_info_messages_samp
 	elif [ "${shortname}" == "sb" ]; then
-		fn_info_message_sb
+		fn_info_messages_sb
 	elif [ "${shortname}" == "sbots" ]; then
-		fn_info_message_sbots
+		fn_info_messages_sbots
 	elif [ "${shortname}" == "scpsl" ] || [ "${shortname}" == "scpslsm" ]; then
-		fn_info_message_scpsl
+		fn_info_messages_scpsl
 	elif [ "${shortname}" == "sdtd" ]; then
-		fn_info_message_sdtd
+		fn_info_messages_sdtd
 	elif [ "${shortname}" == "sf" ]; then
-		fn_info_message_sf
+		fn_info_messages_sf
+	elif [ "${shortname}" == "sm" ]; then
+		fn_info_messages_sm
 	elif [ "${shortname}" == "sof2" ]; then
-		fn_info_message_sof2
+		fn_info_messages_sof2
 	elif [ "${shortname}" == "sol" ]; then
-		fn_info_message_sol
+		fn_info_messages_sol
 	elif [ "${shortname}" == "squad" ]; then
-		fn_info_message_squad
+		fn_info_messages_squad
 	elif [ "${shortname}" == "st" ]; then
-		fn_info_message_st
+		fn_info_messages_st
 	elif [ "${shortname}" == "stn" ]; then
-		fn_info_message_stn
+		fn_info_messages_stn
 	elif [ "${shortname}" == "terraria" ]; then
-		fn_info_message_terraria
+		fn_info_messages_terraria
+	elif [ "${shortname}" == "tf" ]; then
+		fn_info_messages_tf
 	elif [ "${shortname}" == "ti" ]; then
-		fn_info_message_ti
+		fn_info_messages_ti
 	elif [ "${shortname}" == "ts3" ]; then
-		fn_info_message_ts3
+		fn_info_messages_ts3
 	elif [ "${shortname}" == "tu" ]; then
-		fn_info_message_tu
+		fn_info_messages_tu
 	elif [ "${shortname}" == "tw" ]; then
-		fn_info_message_tw
+		fn_info_messages_tw
 	elif [ "${shortname}" == "unt" ]; then
-		fn_info_message_unt
+		fn_info_messages_unt
 	elif [ "${shortname}" == "vh" ]; then
-		fn_info_message_vh
+		fn_info_messages_vh
 	elif [ "${shortname}" == "vints" ]; then
-		fn_info_message_vints
+		fn_info_messages_vints
 	elif [ "${shortname}" == "rust" ]; then
-		fn_info_message_rust
+		fn_info_messages_rust
 	elif [ "${shortname}" == "rw" ]; then
-		fn_info_message_rw
+		fn_info_messages_rw
 	elif [ "${shortname}" == "ut" ]; then
-		fn_info_message_ut
+		fn_info_messages_ut
 	elif [ "${shortname}" == "ut2k4" ]; then
-		fn_info_message_ut2k4
+		fn_info_messages_ut2k4
 	elif [ "${shortname}" == "ut3" ]; then
-		fn_info_message_ut3
+		fn_info_messages_ut3
 	elif [ "${shortname}" == "vpmc" ]; then
-		fn_info_message_vpmc
+		fn_info_messages_vpmc
 	elif [ "${shortname}" == "wet" ]; then
-		fn_info_message_wet
+		fn_info_messages_wet
 	elif [ "${shortname}" == "wf" ]; then
-		fn_info_message_wf
+		fn_info_messages_wf
 	elif [ "${shortname}" == "wurm" ]; then
-		fn_info_message_wurm
+		fn_info_messages_wurm
+	elif [ "${shortname}" == "xnt" ]; then
+		fn_info_messages_xnt
 	elif [ "${engine}" == "goldsrc" ]; then
-		fn_info_message_goldsrc
+		fn_info_messages_goldsrc
 	elif [ "${engine}" == "prism3d" ]; then
-		fn_info_message_prism3d
+		fn_info_messages_prism3d
 	elif [ "${engine}" == "source" ]; then
-		fn_info_message_source
+		fn_info_messages_source
 	elif [ "${engine}" == "spark" ]; then
-		fn_info_message_spark
+		fn_info_messages_spark
 	elif [ "${engine}" == "unreal" ]; then
-		fn_info_message_unreal
+		fn_info_messages_unreal
 	else
 		fn_print_error_nl "Unable to detect game server."
 	fi

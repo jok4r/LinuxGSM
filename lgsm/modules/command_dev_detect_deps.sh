@@ -1,18 +1,16 @@
 #!/bin/bash
 # LinuxGSM command_dev_detect_deps.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Detects dependencies the server binary requires.
 
 commandname="DEV-DETECT-DEPS"
-commandaction="Developer detect deps"
+commandaction="Dependency Checker"
 moduleselfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 fn_firstcommand_set
 
-echo -e "================================="
-echo -e "Dependencies Checker"
-echo -e "================================="
+fn_print_header
 echo -e "Checking directory: "
 echo -e "${serverfiles}"
 if [ "$(command -v eu-readelf 2> /dev/null)" ]; then
@@ -182,33 +180,33 @@ awk -vORS='' '{ print $1,$2 }' "${tmpdir}/.depdetect_ubuntu_list_uniq" > "${tmpd
 awk -vORS='' '{ print $1,$2 }' "${tmpdir}/.depdetect_debian_list_uniq" > "${tmpdir}/.depdetect_debian_line"
 echo -e ""
 echo -e ""
-echo -e "Required Dependencies"
-echo -e "================================="
+echo -e "${bold}Required Dependencies${default}"
+fn_messages_separator
 echo -e "${executable}"
 echo -e ""
-echo -e "CentOS"
-echo -e "================================="
+echo -e "${bold}CentOS"
+fn_messages_separator
 cat "${tmpdir}/.depdetect_centos_line"
 echo -e ""
 echo -e ""
 echo -e "Ubuntu"
-echo -e "================================="
+fn_messages_separator
 cat "${tmpdir}/.depdetect_ubuntu_line"
 echo -e ""
 echo -e ""
 echo -e "Debian"
-echo -e "================================="
+fn_messages_separator
 cat "${tmpdir}/.depdetect_debian_line"
 echo -e ""
 if [ "${unknownlib}" == "1" ]; then
 	echo -e ""
 	echo -e "Unknown shared Library"
-	echo -e "================================="
+	fn_messages_separator
 	cat "${tmpdir}/.depdetect_unknown"
 fi
 echo -e ""
 echo -e "Required Librarys"
-echo -e "================================="
+fn_messages_separator
 sort "${tmpdir}/.depdetect_readelf" | uniq
 echo -en "\n"
 rm -f "${tmpdir:?}/.depdetect_centos_line"

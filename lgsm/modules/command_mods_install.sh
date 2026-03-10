@@ -1,12 +1,12 @@
 #!/bin/bash
 # LinuxGSM command_mods_install.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: List and installs available mods along with mods_list.sh and mods_core.sh.
 
 commandname="MODS-INSTALL"
-commandaction="Installing mods"
+commandaction="Installing Mods"
 moduleselfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 fn_firstcommand_set
 
@@ -19,7 +19,7 @@ fn_print_header
 fn_mods_installed_list
 if [ "${installedmodscount}" -gt "0" ]; then
 	echo -e "Installed addons/mods"
-	echo -e "================================="
+	fn_messages_separator
 	# Go through all available commands, get details and display them to the user.
 	for ((llindex = 0; llindex < ${#installedmodslist[@]}; llindex++)); do
 		# Current mod is the "llindex" value of the array we're going through.
@@ -32,7 +32,7 @@ if [ "${installedmodscount}" -gt "0" ]; then
 fi
 
 echo -e "Available addons/mods"
-echo -e "================================="
+fn_messages_separator
 # Display available mods from mods_list.sh.
 # Set and reset vars
 compatiblemodslistindex=0
@@ -78,7 +78,7 @@ fn_mod_get_info
 
 echo -e ""
 echo -e "Installing ${modprettyname}"
-echo -e "================================="
+fn_messages_separator
 fn_script_log_info "${modprettyname} selected for install"
 
 # Check if the mod is already installed and warn the user.
@@ -88,6 +88,7 @@ if [ -f "${modsinstalledlistfullpath}" ]; then
 		fn_script_log_warn "${modprettyname} is already installed"
 		echo -e " * Any configs may be overwritten."
 		if ! fn_prompt_yn "Continue?" Y; then
+			exitcode=0
 			core_exit.sh
 		fi
 		fn_script_log_info "User selected to continue"

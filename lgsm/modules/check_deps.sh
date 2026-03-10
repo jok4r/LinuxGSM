@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM check_deps.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Checks and installs missing dependencies.
 
@@ -9,8 +9,8 @@ moduleselfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 fn_install_dotnet_repo() {
 	if [ "${distroid}" == "ubuntu" ]; then
-		# if package aspnetcore-runtime-7.0 is unavailable in ubuntu repos, add the microsoft repo.
-		if ! apt-cache show aspnetcore-runtime-7.0 > /dev/null 2>&1; then
+		# if package dotnet-runtime-7.0 is unavailable in ubuntu repos, add the microsoft repo.
+		if ! apt-cache show dotnet-runtime-7.0 > /dev/null 2>&1; then
 			fn_fetch_file "https://packages.microsoft.com/config/ubuntu/${distroversion}/packages-microsoft-prod.deb" "" "" "" "/tmp" "packages-microsoft-prod.deb" "" "" "" ""
 			sudo dpkg -i /tmp/packages-microsoft-prod.deb
 		fi
@@ -25,11 +25,11 @@ fn_install_mono_repo() {
 		fn_print_information_nl "Automatically adding Mono repository."
 		fn_script_log_info "Automatically adding Mono repository."
 		echo -en ".\r"
-		sleep 1
+		fn_sleep_time_1
 		echo -en "..\r"
-		sleep 1
+		fn_sleep_time_1
 		echo -en "...\r"
-		sleep 1
+		fn_sleep_time_1
 		echo -en "   \r"
 		if [ "${distroid}" == "ubuntu" ]; then
 			if [ "${distroversion}" == "22.04" ]; then
@@ -78,11 +78,12 @@ fn_install_mono_repo() {
 
 		# Did Mono repo install correctly?
 		if [ "${monoautoinstall}" != "1" ]; then
-			if [ $? != 0 ]; then
+			exitcode=$?
+			if [ "${exitcode}" -ne 0 ]; then
 				fn_print_failure_nl "Unable to install Mono repository."
-				fn_script_log_fatal "Unable to install Mono repository."
+				fn_script_log_fail "Unable to install Mono repository."
 			else
-				fn_print_complete_nl "Installing Mono repository completed."
+				fn_print_success_nl "Installing Mono repository completed."
 				fn_script_log_pass "Installing Mono repository completed."
 			fi
 		fi
@@ -113,13 +114,13 @@ fn_deps_email() {
 			elif [ -d /etc/sendmail ]; then
 				array_deps_required+=(sendmail)
 			elif [ "$(command -v yum 2> /dev/null)" ] || [ "$(command -v dnf 2> /dev/null)" ]; then
-				array_deps_required+=(mailx postfix)
+				array_deps_required+=(s-nail postfix)
 			elif [ "$(command -v apt 2> /dev/null)" ]; then
 				array_deps_required+=(mailutils postfix)
 			fi
 		else
 			if [ "$(command -v yum 2> /dev/null)" ] || [ "$(command -v dnf 2> /dev/null)" ]; then
-				array_deps_required+=(mailx postfix)
+				array_deps_required+=(s-nail postfix)
 			elif [ "$(command -v apt 2> /dev/null)" ]; then
 				array_deps_required+=(mailutils postfix)
 			fi
@@ -138,7 +139,6 @@ fn_install_missing_deps() {
 			fn_print_warn "Missing dependencies: ${red}${array_deps_missing[*]}${default}"
 			fn_script_log_warn "Missing dependencies: ${array_deps_missing[*]}"
 		fi
-		fn_sleep_time
 
 		# Attempt automatic dependency installation
 		if [ "${autoinstall}" == "1" ]; then
@@ -161,8 +161,8 @@ fn_install_missing_deps() {
 				fn_print_information_nl "$(whoami) has sudo access."
 				fn_script_log_info "$(whoami) has sudo access."
 			else
-				fn_print_warning_nl "$(whoami) does not have sudo access. Manually install dependencies."
-				fn_script_log_warn "$(whoami) does not have sudo access. Manually install dependencies."
+				fn_print_warning_nl "$(whoami) does not have sudo access. Manually install dependencies or run ./${selfname} install as root."
+				fn_script_log_warn "$(whoami) does not have sudo access. Manually install dependencies or run ./${selfname} install as root."
 			fi
 		fi
 
@@ -178,11 +178,11 @@ fn_install_missing_deps() {
 			fn_print_information_nl "Automatically installing missing dependencies."
 			fn_script_log_info "Automatically installing missing dependencies."
 			echo -en ".\r"
-			sleep 1
+			fn_sleep_time_1
 			echo -en "..\r"
-			sleep 1
+			fn_sleep_time_1
 			echo -en "...\r"
-			sleep 1
+			fn_sleep_time_1
 			echo -en "   \r"
 			if [ "$(command -v apt 2> /dev/null)" ]; then
 				cmd="echo steamcmd steam/question select \"I AGREE\" | sudo debconf-set-selections; echo steamcmd steam/license note '' | sudo debconf-set-selections; ${i386installcommand}sudo apt-get update; sudo apt-get -y install ${array_deps_missing[*]}"
@@ -196,27 +196,28 @@ fn_install_missing_deps() {
 			fi
 			autodepinstall="$?"
 
-			# If auto install passes remove steamcmd install failure.
+			# If auto install passes, remove steamcmd install failure and set exit code to 0.
 			if [ "${autodepinstall}" == "0" ]; then
 				unset steamcmdfail
+				exitcode=0
 			fi
 		fi
 
 		# If automatic dependency install is unavailable.
 		if [ "${autodepinstall}" != "0" ]; then
 			if [ "$(command -v apt 2> /dev/null)" ]; then
-				echo -e "${i386installcommand}sudo apt update; sudo apt install ${array_deps_missing[*]}"
+				echo -e " Run: '${green}${i386installcommand}sudo apt update; sudo apt install ${array_deps_missing[*]}${default}' as root to install missing dependencies."
 			elif [ "$(command -v dnf 2> /dev/null)" ]; then
-				echo -e "sudo dnf install ${array_deps_missing[*]}"
+				echo -e " Run: '${green}sudo dnf install ${array_deps_missing[*]}${default}' as root to install missing dependencies."
 			elif [ "$(command -v yum 2> /dev/null)" ]; then
-				echo -e "sudo yum install ${array_deps_missing[*]}"
+				echo -e " Run: '${green}sudo yum install ${array_deps_missing[*]}${default}' as root to install missing dependencies."
 			fi
 		fi
 
 		if [ "${steamcmdfail}" ]; then
 			if [ "${commandname}" == "INSTALL" ]; then
 				fn_print_failure_nl "Missing dependencies required to run SteamCMD."
-				fn_script_log_fatal "Missing dependencies required to run SteamCMD."
+				fn_script_log_fail "Missing dependencies required to run SteamCMD."
 				core_exit.sh
 			else
 				fn_print_error_nl "Missing dependencies required to run SteamCMD."
@@ -226,7 +227,7 @@ fn_install_missing_deps() {
 
 	else
 		if [ "${commandname}" == "INSTALL" ]; then
-			fn_print_information_nl "Required dependencies already installed."
+			fn_print_skip2_nl "Required dependencies already installed."
 			fn_script_log_info "Required dependencies already installed."
 		fi
 	fi
@@ -234,7 +235,7 @@ fn_install_missing_deps() {
 
 fn_check_loop() {
 	# Loop though required depenencies checking if they are installed.
-	for deptocheck in ${array_deps_required[*]}; do
+	for deptocheck in "${array_deps_required[@]}"; do
 		fn_deps_detector
 	done
 
@@ -250,12 +251,15 @@ fn_deps_detector() {
 	if [ "${deptocheck}" == "libsdl2-2.0-0:i386" ] && [ -z "${appid}" ]; then
 		array_deps_required=("${array_deps_required[@]/libsdl2-2.0-0:i386/}")
 		steamcmdstatus=1
+		return
 	elif [ "${deptocheck}" == "steamcmd" ] && [ -z "${appid}" ]; then
 		array_deps_required=("${array_deps_required[@]/steamcmd/}")
 		steamcmdstatus=1
-	elif [ "${deptocheck}" == "steamcmd" ] && [ "${distroid}" == "debian" ] && ! grep -qE "^deb .*non-free" /etc/apt/sources.list; then
+		return
+	elif [ "${deptocheck}" == "steamcmd" ] && [ "${distroid}" == "debian" ] && ! grep -qE '[^deb]+non-free([^-]|$)' /etc/apt/sources.list; then
 		array_deps_required=("${array_deps_required[@]/steamcmd/}")
 		steamcmdstatus=1
+		return
 	# Java: Added for users using Oracle JRE to bypass check.
 	elif [[ ${deptocheck} == "openjdk"* ]] || [[ ${deptocheck} == "java"* ]]; then
 		# Is java already installed?
@@ -278,9 +282,9 @@ fn_deps_detector() {
 			monoinstalled=false
 		fi
 	# .NET Core: A .NET Core repo needs to be installed.
-	elif [ "${deptocheck}" == "aspnetcore-runtime-7.0" ]; then
+	elif [ "${deptocheck}" == "dotnet-runtime-7.0" ]; then
 		# .NET is not installed.
-		if [ -n "${dotnetversion}" ]; then
+		if dotnet --list-runtimes | grep -q "Microsoft.NETCore.App 7.0"; then
 			depstatus=0
 			dotnetinstalled=true
 		else
@@ -307,18 +311,18 @@ fn_deps_detector() {
 		missingdep=0
 		if [ "${commandname}" == "INSTALL" ]; then
 			echo -e "${green}${deptocheck}${default}"
-			sleep 0.1
+			fn_sleep_time
 		fi
 	elif [ "${depstatus}" != "0" ]; then
 		# If dependency is not found.
 		missingdep=1
 		if [ "${commandname}" == "INSTALL" ]; then
 			echo -e "${red}${deptocheck}${default}"
-			sleep 0.1
+			fn_sleep_time
 		fi
 		# If SteamCMD requirements are not met install will fail.
 		if [ -n "${appid}" ]; then
-			for steamcmddeptocheck in ${array_deps_required_steamcmd[*]}; do
+			for steamcmddeptocheck in "${array_deps_required_steamcmd[@]}"; do
 				if [ "${deptocheck}" != "steamcmd" ] && [ "${deptocheck}" == "${steamcmddeptocheck}" ]; then
 					steamcmdfail=1
 				fi
@@ -336,23 +340,22 @@ fn_deps_detector() {
 if [ "${commandname}" == "INSTALL" ]; then
 	if [ "$(whoami)" == "root" ]; then
 		echo -e ""
-		echo -e "${lightyellow}Checking Dependencies as root${default}"
-		echo -e "================================="
+		echo -e "${bold}${lightyellow}Checking ${gamename} Dependencies as root${default}"
+		fn_messages_separator
 		fn_print_information_nl "Checking any missing dependencies for ${gamename} server only."
 		fn_print_information_nl "This will NOT install a ${gamename} server."
-		fn_sleep_time
 	else
 		echo -e ""
-		echo -e "${lightyellow}Checking Dependencies${default}"
-		echo -e "================================="
+		echo -e "${bold}${lightyellow}Checking ${gamename} Dependencies${default}"
+		fn_messages_separator
 	fi
 fi
 
 # Will warn user if their distro is no longer supported by the vendor.
 if [ -n "${distrosupport}" ]; then
 	if [ "${distrosupport}" == "unsupported" ]; then
-		fn_print_warning_nl "${distroname} is no longer supported by the vendor. Upgrading is recommended."
-		fn_script_log_warn "${distroname} is no longer supported by the vendor. Upgrading is recommended."
+		fn_print_warning_nl "${distroname} is no longer supported by the vendor or LinuxGSM. Upgrading is recommended."
+		fn_script_log_warn "${distroname} is no longer supported by the vendor or LinuxGSM. Upgrading is recommended."
 	fi
 fi
 
@@ -362,7 +365,7 @@ if [ ! -f "${tmpdir}/dependency-no-check.tmp" ] && [ ! -f "${datadir}/${distroid
 	# Check that the distro dependency csv file exists.
 	fn_check_file_github "lgsm/data" "${distroid}-${distroversioncsv}.csv"
 	if [ -n "${checkflag}" ] && [ "${checkflag}" == "0" ]; then
-		fn_fetch_file_github "lgsm/data" "${distroid}-${distroversioncsv}.csv" "lgsm/data" "chmodx" "norun" "noforce" "nohash"
+		fn_fetch_file_github "lgsm/data" "${distroid}-${distroversioncsv}.csv" "${datadir}" "chmodx" "norun" "noforce" "nohash"
 	fi
 fi
 

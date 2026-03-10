@@ -1,7 +1,7 @@
 #!/bin/bash
 # LinuxGSM command_ts3.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Handles updating of Teamspeak 3 servers.
 
@@ -31,7 +31,7 @@ fn_update_localbuild() {
 }
 
 fn_update_remotebuild() {
-	# Get remote build info.
+	# Gets remote build info.
 	apiurl="https://www.teamspeak.com/versions/server.json"
 	remotebuildresponse=$(curl -s "${apiurl}")
 
@@ -50,7 +50,7 @@ fn_update_remotebuild() {
 		# Checks if remotebuildversion variable has been set.
 		if [ -z "${remotebuildversion}" ] || [ "${remotebuildversion}" == "null" ]; then
 			fn_print_fail "Checking remote build: ${remotelocation}"
-			fn_script_log_fatal "Checking remote build"
+			fn_script_log_fail "Checking remote build"
 			core_exit.sh
 		else
 			fn_print_ok "Checking remote build: ${remotelocation}"
@@ -60,7 +60,7 @@ fn_update_remotebuild() {
 		# Checks if remotebuild variable has been set.
 		if [ -z "${remotebuildversion}" ] || [ "${remotebuildversion}" == "null" ]; then
 			fn_print_failure "Unable to get remote build"
-			fn_script_log_fatal "Unable to get remote build"
+			fn_script_log_fail "Unable to get remote build"
 			core_exit.sh
 		fi
 	fi
@@ -108,7 +108,7 @@ fn_update_compare() {
 					command_start.sh
 					fn_firstcommand_reset
 					exitbypass=1
-					sleep 5
+					fn_sleep_time_5
 					command_stop.sh
 					fn_firstcommand_reset
 				fi
@@ -164,12 +164,18 @@ elif [ "${arch}" == "i386" ] || [ "${arch}" == "i686" ]; then
 	ts3arch="x86"
 else
 	fn_print_failure "Unknown or unsupported architecture: ${arch}"
-	fn_script_log_fatal "Unknown or unsupported architecture: ${arch}"
+	fn_script_log_fail "Unknown or unsupported architecture: ${arch}"
 	core_exit.sh
 fi
 
 # The location where the builds are checked and downloaded.
 remotelocation="teamspeak.com"
+
+if [ ! "$(command -v jq 2> /dev/null)" ]; then
+	fn_print_fail_nl "jq is not installed"
+	fn_script_log_fail "jq is not installed"
+	core_exit.sh
+fi
 
 if [ "${firstcommandname}" == "INSTALL" ]; then
 	fn_update_remotebuild

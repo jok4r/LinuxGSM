@@ -1,18 +1,18 @@
 #!/bin/bash
 # LinuxGSM command_dev_clear_modules.sh module
 # Author: Daniel Gibbs
-# Contributors: http://linuxgsm.com/contrib
+# Contributors: https://linuxgsm.com/contrib
 # Website: https://linuxgsm.com
 # Description: Deletes the contents of the modules dir.
 
 commandname="DEV-CLEAR-MODULES"
-commandaction="Clearing modules"
+commandaction="Clear Modules"
 moduleselfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 fn_firstcommand_set
 
-echo -e "================================="
-echo -e "Clear Modules"
-echo -e "================================="
+echo -e ""
+echo -e "${bold}${lightyellow}Clear Modules${default}"
+fn_messages_separator
 echo -e ""
 if fn_prompt_yn "Do you want to delete all modules?" Y; then
 	rm -rfv "${modulesdir:?}/"*
